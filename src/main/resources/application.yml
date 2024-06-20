@@ -2,3 +2,5 @@ spring.application.name: art_critique
 server:
   servlet:
     context-path: /api
+
+# 123
