@@ -2,14 +2,3 @@ spring.application.name: art_critique
 server:
   servlet:
     context-path: /api
-
-spring:
-  datasource:
-    url: jdbc:postgresql://ep-red-frog-a15xuf8u.ap-southeast-1.pg.koyeb.app/mine
-    username: koyeb-adm
-    password: Ks7IeRc2juBi
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    open-in-view: false
