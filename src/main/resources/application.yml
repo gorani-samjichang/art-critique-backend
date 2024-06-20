@@ -3,7 +3,7 @@ server:
   servlet:
     context-path: /api
 
-#spring:123
+#spring:
 #  datasource:
 #    url:
 #    username:
