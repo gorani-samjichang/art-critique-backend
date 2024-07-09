@@ -1,4 +1,4 @@
-package com.gorani_samjichang.art_critique;
+package com.gorani_samjichang.art_critique.common;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

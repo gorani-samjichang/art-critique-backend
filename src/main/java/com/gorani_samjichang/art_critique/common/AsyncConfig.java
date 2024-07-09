@@ -1,4 +1,4 @@
-package com.gorani_samjichang.art_critique.feedback;
+package com.gorani_samjichang.art_critique.common;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
