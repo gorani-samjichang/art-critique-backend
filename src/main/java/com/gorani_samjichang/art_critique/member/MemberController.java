@@ -75,7 +75,7 @@ public class MemberController {
             System.out.println("회원정보 수정 절차를 시작합니다");
             String profile_url = null;
             if (profile != null) {
-                profile_url = uploadToStorage(uid, profile);
+                profile_url = upload_to_storage(uid, profile);
             }
             memberEntity.get().setNickname(nickname);
             memberEntity.get().setProfile_url(profile_url);
@@ -87,7 +87,7 @@ public class MemberController {
             System.out.println("데이터베이스 회원가입 절차를 시작합니다");
             String profile_url = null;
             if (profile != null) {
-                profile_url = uploadToStorage(uid, profile);
+                profile_url = upload_to_storage(uid, profile);
             }
             String email = userRecord.getEmail();
             MemberEntity me = MemberEntity
@@ -123,7 +123,40 @@ public class MemberController {
         }
     }
 
-    String uploadToStorage(String uid, MultipartFile profile) throws IOException {
+    @GetMapping("/isNewMember/{uid}")
+    boolean is_new_member(@PathVariable("uid") String uid) {
+        Optional<MemberEntity> memberEntity = memberRepository.findBySnsMapKey(uid);
+        return memberEntity.isEmpty();
+    }
+
+    @GetMapping("/isMember/{email}")
+    boolean is_member(@PathVariable("email") String email) {
+        Optional<MemberEntity> memberEntity = memberRepository.findByEmail(email);
+        return memberEntity.isPresent();
+    }
+
+    @GetMapping("/member/{uid}")
+    MemberEntity member(@PathVariable("uid") String uid) {
+        Optional<MemberEntity> memberEntity = memberRepository.findBySnsMapKey(uid);
+        if (memberEntity.isPresent()) return memberEntity.get();
+        else return null;
+    }
+
+    @GetMapping("/isDatabaseMember/{uid}")
+    boolean is_database_member(@PathVariable("uid") String uid) throws FirebaseAuthException {
+        System.out.println("데이터베이스에 있는지 검증 시작");
+        Optional<MemberEntity> memberEntity = memberRepository.findBySnsMapKey(uid);
+        if (memberEntity.isPresent()) {
+            System.out.println("데이터베이스에 있음");
+            return true;
+        } else {
+            System.out.println("데이터베이스에 없음");
+            FirebaseAuth.getInstance().deleteUser(uid);
+            return false;
+        }
+    }
+
+    String upload_to_storage(String uid, MultipartFile profile) throws IOException {
         String fileName = uid;
         Bucket bucket = StorageClient.getInstance().bucket();
         InputStream content = new ByteArrayInputStream(profile.getBytes());

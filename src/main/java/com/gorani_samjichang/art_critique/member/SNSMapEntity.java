@@ -1,5 +1,6 @@
 package com.gorani_samjichang.art_critique.member;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,5 +16,6 @@ public class SNSMapEntity {
     private String key;
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uid", referencedColumnName = "uid")
+    @JsonBackReference
     private MemberEntity member;
 }
