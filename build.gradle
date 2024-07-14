@@ -20,6 +20,7 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -39,6 +40,23 @@ dependencies {
 
     //firebase
     implementation 'com.google.firebase:firebase-admin:9.2.0'
+
+    //oauth1.0
+    implementation 'oauth.signpost:signpost-core:1.2.1.2'
+    implementation 'oauth.signpost:signpost-commonshttp4:1.2.1.2'
+
+    //jwt
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+    //webClient
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    //google login
+    implementation 'com.google.api-client:google-api-client:1.32.1'
+    implementation 'com.google.oauth-client:google-oauth-client-jetty:1.32.1'
+    implementation 'com.google.auth:google-auth-library-oauth2-http:0.26.0'
 }
 
 tasks.named('test') {

@@ -1,4 +1,4 @@
-package com.gorani_samjichang.art_critique;
+package com.gorani_samjichang.art_critique.common;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
@@ -23,7 +23,6 @@ public class FirebaseConfig {
 
     @PostConstruct
     public void initializeFCM() throws IOException {
-        System.out.println(firebaseSdkPath);
         try {
             FirebaseOptions options = new FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(
