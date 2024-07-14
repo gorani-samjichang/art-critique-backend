@@ -1,15 +1,11 @@
 package com.gorani_samjichang.art_critique.member;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.firebase.auth.*;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
-import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,26 +16,20 @@ import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.tomcat.util.json.JSONParser;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpRequest;
-import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/member")
@@ -56,41 +46,48 @@ public class MemberController {
     @Value("${token.verify.prefix}")
     String prefix;
     @Value("${twitter.consumer.key}")
-    String twitter_key;
+    String twitterKey;
     @Value("${twitter.consumer.secret}")
-    String twitter_secret;
+    String twitterSecret;
 
     @GetMapping("is-logined")
-    boolean is_logined() {
+    boolean isLogined() {
         return true;
     }
     @PostMapping("/public/member-join")
-    HashMap<String, String> member_join(
+    HashMap<String, String> memberJoin(
             @RequestParam(name = "password", required = false) String password,
             @RequestParam(value = "nickname") String nickname,
             @RequestParam(value = "level", required = false) String level,
-            @RequestParam(value = "profile", required = false) String profile,
+            @RequestParam(value = "profile", required = false) MultipartFile profile,
             HttpServletRequest request, HttpServletResponse response) throws IOException {
 
-        String email = email_token_validation(request);
+        String email = emailTokenValidation(request);
         MemberEntity memberEntity = MemberEntity.builder()
                 .email(email)
-                .created_at(LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
                 .credit(0)
                 .nickname(nickname)
+                .isDeleted(false)
                 .role("USER")
                 .build();
+
+        String serialNumber = bCryptPasswordEncoder.encode(memberEntity.getEmail());
+        memberEntity.setSerialNumber(serialNumber);
         if (password == null) {
             memberEntity.setPassword(bCryptPasswordEncoder.encode(commonUtil.generateSecureRandomString(30)));
         } else {
             memberEntity.setPassword(bCryptPasswordEncoder.encode(password));
         }
         if (level != null) memberEntity.setLevel(level);
-        if (profile != null) memberEntity.setLevel(profile);
+        if (profile != null) {
+            String profile_url = commonUtil.uploadToStorage(profile, serialNumber);
+            memberEntity.setProfile(profile_url);
+        }
         memberRepository.save(memberEntity);
 
         String token = jwtUtil.createJwt(email, memberEntity.getRole(), 7*24*60*60*1000L);
-        register_cookie("Authorization", token, -1, response);
+        registerCookie("Authorization", token, -1, response);
 
         HashMap<String, String> dto = new HashMap<>();
         dto.put("email", memberEntity.getEmail());
@@ -102,12 +99,12 @@ public class MemberController {
     }
 
     @GetMapping("/public/emailCheck/{email}")
-    boolean email_check(@PathVariable String email) {
+    boolean emailCheck(@PathVariable String email) {
         return memberRepository.existsByEmail(email);
     }
 
     @GetMapping("/public/nicknameCheck/{nickname}")
-    boolean nickname_check(@PathVariable String nickname) throws Exception {
+    boolean nicknameCheck(@PathVariable String nickname) throws Exception {
         return memberRepository.existsByNickname(nickname);
     }
 
@@ -140,32 +137,32 @@ public class MemberController {
     }
 
     @GetMapping("/public/levelList")
-    String get_level_list() {
+    String getLevelList() {
         return "[{\"value\": \"newbie\",\"display\": \"입문\",\"color\": \"rgb(245,125,125)\"},{\"value\": \"chobo\",\"display\": \"초보\",\"color\": \"rgb(214, 189, 81)\"},{\"value\": \"intermediate\",\"display\": \"중수\",\"color\": \"rgb(82, 227, 159)\"},{\"value\": \"gosu\",\"display\": \"고수\",\"color\": \"rgb(70, 104, 227)\"}]";
     }
 
-    String get_role(String email) {
+    String getRole(String email) {
         MemberEntity me = memberRepository.findByEmail(email);
         return (me == null) ? null : me.getRole();
     }
 
-    @GetMapping("/public/oauth-login/google/{id_token}")
-    boolean oauth_google_login(@PathVariable String id_token, HttpServletResponse response) throws UnsupportedEncodingException {
+    @GetMapping("/public/oauth-login/google/{idToken}")
+    boolean oauthGoogleLogin(@PathVariable String idToken, HttpServletResponse response) throws UnsupportedEncodingException {
         GoogleIdToken.Payload payload =  webClientBuilder.build()
                 .get()
-                .uri("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=" + id_token)
+                .uri("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=" + idToken)
                 .retrieve()
                 .bodyToMono(GoogleIdToken.Payload.class)
                 .block();
         String email = null;
         if (payload != null) {
             email = payload.getEmail();
-            String role = get_role(email);
+            String role = getRole(email);
             if (role == null) {
                 return false;
             } else {
                 String token = jwtUtil.createJwt(email, role, 7*24*60*60*1000L);
-                register_cookie("Authorization", token, -1, response);
+                registerCookie("Authorization", token, -1, response);
                 return true;
             }
         } else {
@@ -174,11 +171,14 @@ public class MemberController {
         return false;
     }
 
-    @GetMapping("/public/oauth-login/x/{access_token}/{token_secret}/{uid}")
-    boolean oauth_x_login(@PathVariable String access_token, @PathVariable String token_secret, @PathVariable String uid, HttpServletResponse response) {
+    @GetMapping("/public/oauth-login/x/{accessToken}/{tokenSecret}/{uid}")
+    boolean oauthXLogin(@PathVariable("accessToken") String accessToken,
+                          @PathVariable("tokenSecret") String tokenSecret,
+                          @PathVariable String uid,
+                          HttpServletResponse response) {
 
         try {
-            validate_twitter_login(access_token, token_secret);
+            validateTwitterLogin(accessToken, tokenSecret);
             UserRecord userRecord = FirebaseAuth.getInstance().getUser(uid);
             String email = (userRecord.getProviderData())[0].getEmail();
 
@@ -186,12 +186,12 @@ public class MemberController {
                 email = email + "@twitter.com";
             }
 
-            String role = get_role(email);
+            String role = getRole(email);
             if (role == null) {
                 return false;
             } else {
                 String token = jwtUtil.createJwt(email, role, 7*24*60*60*1000L);
-                register_cookie("Authorization", token, -1, response);
+                registerCookie("Authorization", token, -1, response);
                 return true;
             }
         } catch (Exception e) {
@@ -202,7 +202,7 @@ public class MemberController {
 
 
     @GetMapping("/public/temp-token/{email}")
-    void temp_token(@PathVariable String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
+    void tempToken(@PathVariable String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
         if (email.startsWith(prefix)) {
             String [] split = email.split("@");
             if (split[1].equals("google")) {
@@ -214,24 +214,24 @@ public class MemberController {
                         .block();
                 email = payload.getEmail();
             } else if (split[1].equals("x")) {
-                String access_token = split[2];
-                String token_secret = split[3];
+                String accessToken = split[2];
+                String tokenSecret = split[3];
                 String uid = split[4];
-                validate_twitter_login(access_token, token_secret);
+                validateTwitterLogin(accessToken, tokenSecret);
                 UserRecord userRecord = FirebaseAuth.getInstance().getUser(uid);
-                String firebase_email = (userRecord.getProviderData())[0].getEmail();
+                String firebaseEmail = (userRecord.getProviderData())[0].getEmail();
 
                 if (!email.contains("@")) {
-                    firebase_email = firebase_email + "@twitter.com";
+                    firebaseEmail = firebaseEmail + "@twitter.com";
                 }
-                email = firebase_email;
+                email = firebaseEmail;
             }
         }
         String token = jwtUtil.createEmailJwt(email, 60*60*1000L);
-        register_cookie("token", token, -1, response);
+        registerCookie("token", token, -1, response);
     }
 
-    String email_token_validation(HttpServletRequest request) {
+    String emailTokenValidation(HttpServletRequest request) {
         String token = null;
         Cookie[] list = request.getCookies();
         if (list == null) {
@@ -249,19 +249,19 @@ public class MemberController {
         return jwtUtil.getEmail(token);
     }
 
-    void register_cookie(String key, String token, int max_age, HttpServletResponse response) throws UnsupportedEncodingException {
+    void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
         String encodedValue = URLEncoder.encode( token, "UTF-8" );
         Cookie cookie = new Cookie( key, encodedValue);
-        cookie.setMaxAge(max_age);
+        cookie.setMaxAge(maxAge);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
     }
 
-    void validate_twitter_login(String access_token, String token_secret) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException {
-        OAuthConsumer consumer = new CommonsHttpOAuthConsumer(twitter_key, twitter_secret);
-        consumer.setTokenWithSecret(access_token, token_secret);
+    void validateTwitterLogin(String accessToken, String tokenSecret) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException {
+        OAuthConsumer consumer = new CommonsHttpOAuthConsumer(twitterKey, twitterSecret);
+        consumer.setTokenWithSecret(accessToken, tokenSecret);
 
         URI uri = URI.create("https://api.twitter.com/1.1/account/verify_credentials.json");
         HttpGet request = new HttpGet(uri);

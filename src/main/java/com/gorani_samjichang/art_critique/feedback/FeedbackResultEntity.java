@@ -16,8 +16,8 @@ public class FeedbackResultEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long frid;
 
-    private String feedback_type;
-    private String feedback_content;
+    private String feedbackType;
+    private String feedbackContent;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fid")
     @JsonBackReference

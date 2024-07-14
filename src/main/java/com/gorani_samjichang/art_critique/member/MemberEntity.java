@@ -23,15 +23,16 @@ public class MemberEntity {
 //    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 //    @JsonManagedReference
 //    private SNSMapEntity snsMap;
+    private String serialNumber;
     private String email;
     private String password;
-    private Boolean is_deleted;
+    private Boolean isDeleted;
     private String nickname;
     private Integer credit;
     @Column(columnDefinition = "TEXT")
     private String profile;
     private String level;
-    private LocalDateTime created_at;
+    private LocalDateTime createdAt;
     private String role; // USER, ADMIN 이정도만 생각하는중
     @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference

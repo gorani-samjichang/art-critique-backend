@@ -1,31 +1,18 @@
 package com.gorani_samjichang.art_critique.feedback;
 
-import com.google.cloud.storage.Bucket;
-import com.google.firebase.cloud.StorageClient;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/feedback")
@@ -35,8 +22,7 @@ public class FeedbackController {
     final FeedbackRepository feedbackRepository;
     final MemberRepository memberRepository;
     final CommonUtil commonUtil;
-    @Value("${firebaseBucket}")
-    String bucketName;
+    final BCryptPasswordEncoder bCryptPasswordEncoder;
     String [] dummyTodayGoodImage = new String [] {
             "https://picsum.photos/id/88/180/160",
             "https://picsum.photos/id/51/200/200",
@@ -55,36 +41,41 @@ public class FeedbackController {
             "https://picsum.photos/id/15/240/140"
     };
 
-    String dummyFeedback = "[{\"type\": \"점수\",\"content\": {\"item\": [{\"item_name\": \"인체이해도\",\"item_grade\": 55},{\"item_name\": \"구도와 표현력\",\"item_grade\": 38},{\"item_name\": \"명암과 그림자\",\"item_grade\": 26},{\"item_name\": \"비례와 원근\",\"item_grade\": 52},{\"item_name\": \"색체 이해도\",\"item_grade\": 83}]}},{\"type\": \"종합평가\",\"content\": {\"class\": \"중수\",\"detail\": \"이 그림은 전체적으로 높은 수준의 기술과 창의성을 보여주지만, 일부 세부적인 부분에서 개선할 수 있는 여지가 있습니다. 비율과 해부학적 정확성을 조금 더 현실감 있게 조절하고, 동작과 자세를 더욱 역동적으로 표현하며, 디테일과 정확성을 더 높이고, 조명과 그림자의 사용을 더욱 정교하게 하며, 색채와 채색의 깊이를 더욱 다채롭게 만들면 그림의 완성도가 한층 더 높아질 것입니다.\"}}]";
-
-    @GetMapping("/public/goodImage")
+    @GetMapping("/public/good-image")
     String [] getGoodImage() {
         String [] todayGoodImage = dummyTodayGoodImage;
         return todayGoodImage;
     }
 
     @PostMapping("/request")
-    Long requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request) throws IOException, InterruptedException {
-        Thread.sleep(1000);
+    String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request) throws IOException, InterruptedException {
+        Thread.sleep(1500);
 
         FeedbackResultEntity feedbackResultEntity1 = FeedbackResultEntity.builder()
-                .feedback_type("종합평가")
-                .feedback_content("{\"content\": \"이 그림은 전체적으로 높은 수준의 기술과 창의성을 보여주지만, 일부 세부적인 부분에서 개선할 수 있는 여지가 있습니다. 비율과 해부학적 정확성을 조금 더 현실감 있게 조절하고, 동작과 자세를 더욱 역동적으로 표현하며, 디테일과 정확성을 더 높이고, 조명과 그림자의 사용을 더욱 정교하게 하며, 색채와 채색의 깊이를 더욱 다채롭게 만들면 그림의 완성도가 한층 더 높아질 것입니다.\", \"class\": \"중수\"}")
+                .feedbackType("종합평가")
+                .feedbackContent("{\"content\": \"이 그림은 전체적으로 높은 수준의 기술과 창의성을 보여주지만, 일부 세부적인 부분에서 개선할 수 있는 여지가 있습니다. 비율과 해부학적 정확성을 조금 더 현실감 있게 조절하고, 동작과 자세를 더욱 역동적으로 표현하며, 디테일과 정확성을 더 높이고, 조명과 그림자의 사용을 더욱 정교하게 하며, 색채와 채색의 깊이를 더욱 다채롭게 만들면 그림의 완성도가 한층 더 높아질 것입니다.\", \"class\": \"중수\"}")
                 .build();
 
         FeedbackResultEntity feedbackResultEntity2 = FeedbackResultEntity.builder()
-                .feedback_type("점수")
-                .feedback_content("{\"item\": [{\"item_name\": \"인체이해도\",\"item_grade\": 55},{\"item_name\": \"구도와 표현력\",\"item_grade\": 38},{\"item_name\": \"명암과 그림자\",\"item_grade\": 26},{\"item_name\": \"비례와 원근\",\"item_grade\": 52},{\"item_name\": \"색체 이해도\",\"item_grade\": 83}]}")
+                .feedbackType("점수")
+                .feedbackContent("{\"item\": [{\"itemName\": \"인체이해도\",\"itemGrade\": 55},{\"itemName\": \"구도와 표현력\",\"itemGrade\": 38},{\"itemName\": \"명암과 그림자\",\"itemGrade\": 26},{\"itemName\": \"비례와 원근\",\"itemGrade\": 52},{\"itemName\": \"색체 이해도\",\"itemGrade\": 83}]}")
                 .build();
 
-        String image_url = upload_to_storage(imageFile);
         FeedbackEntity feedbackEntity = FeedbackEntity.builder()
-                .created_at(LocalDateTime.now())
-                .is_public(true)
-                .used_token(10L)
+                .createdAt(LocalDateTime.now())
+                .isPublic(true)
+                .usedToken(10L)
                 .version(1)
-                .picture_url(image_url)
                 .build();
+
+        String serialNumber = "a" + bCryptPasswordEncoder.encode(String.valueOf(feedbackEntity.getFid()));
+        serialNumber = serialNumber.replace("$", "-");
+        serialNumber = serialNumber.replace("/", "_");
+        serialNumber = serialNumber.replace(".", "Z");
+        System.out.println(serialNumber);
+        feedbackEntity.setSerialNumber(serialNumber);
+        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
+        feedbackEntity.setPictureUrl(imageUrl);
 
         feedbackEntity.addFeedbackResult(feedbackResultEntity1);
         feedbackEntity.addFeedbackResult(feedbackResultEntity2);
@@ -95,14 +86,14 @@ public class FeedbackController {
 
         memberRepository.save(me);
 
-        return feedbackEntity.getFid();
+        return feedbackEntity.getSerialNumber();
     }
 
-    @GetMapping("/public/retrieve/{fid}")
-    FeedbackEntity retrieve_feedback(@PathVariable Long fid) {
-        System.out.println(fid);
-        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findById(fid);
+    @GetMapping("/public/retrieve/{serialNumber}")
+    FeedbackEntity retrieveFeedback(@PathVariable("serialNumber") String serialNumber) {
+        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
         if (feedbackEntity.isPresent()) {
+            System.out.println("잘받음");
             return feedbackEntity.get();
         } else {
             System.out.println("아예 피드백이 없음");
@@ -110,11 +101,32 @@ public class FeedbackController {
         }
     }
 
-    String upload_to_storage(MultipartFile profile) throws IOException {
-        String fileName = commonUtil.generateSecureRandomString(80);
-        Bucket bucket = StorageClient.getInstance().bucket();
-        InputStream content = new ByteArrayInputStream(profile.getBytes());
-        bucket.create(fileName, content, profile.getContentType());
-        return "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/" + fileName + "?alt=media&token=";
+    @PostMapping("review/{serialNumber}")
+    boolean feedbackReview(@PathVariable String serialNumber,
+                           @RequestParam boolean isLike,
+                           @RequestParam String review,
+                           HttpServletRequest request,
+                           HttpServletResponse response) {
+        if (review.length() < 9) {
+            response.setStatus(401);
+            return false;
+        }
+        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+        if (feedbackEntity.isEmpty()) {
+            response.setStatus(401);
+        } else {
+            if (!feedbackEntity.get().getMemberEntity().getEmail().equals(request.getAttribute("email"))) {
+                response.setStatus(401);
+                return false;
+            }
+            feedbackEntity.get().setUserReview(isLike);
+            feedbackEntity.get().setUserReviewDetail(review);
+            feedbackRepository.save(feedbackEntity.get());
+            return true;
+        }
+        return false;
     }
+
+
+
 }
