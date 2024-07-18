@@ -34,6 +34,7 @@ public class FeedbackEntity {
     @Column(columnDefinition = "TEXT")
     private String userReviewDetail;
     private Boolean isPublic;
+    private Boolean isBookmarked;
     @OneToMany(mappedBy = "feedbackEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
     private List<FeedbackResultEntity> feedbackResults;

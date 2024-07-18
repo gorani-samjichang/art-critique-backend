@@ -4,7 +4,7 @@
 https://drive.google.com/open?id=1Tb7JuHGzdUiCCFJLKPCB9L5twLPFsE0U&usp=drive_fs
 <br><br>
 2. 빌드 완료한 application.yml을 확인하려면 다음 파일을 확인해 주세요
-   https://drive.google.com/open?id=1TiF4Q48JLtH2OpWXpe8wdO1B7yVQlX5H&usp=drive_fs
+https://drive.google.com/open?id=1TiF4Q48JLtH2OpWXpe8wdO1B7yVQlX5H&usp=drive_fs
 <br><br>
 3. 루트 폴더에서 src\main\resources\application.yml 파일을 생성하여 다음과 같이 작성해 주세요
 ```
@@ -13,6 +13,7 @@ server:
   servlet:
     context-path: /api
 
+feedback.server.host: http://localhost:8000/api/feedback # 7-18추가됨
 firebaseSdkPath: keystore/art-cri**********************b9.json # (1에서 받은 파일명)
 firebaseBucket: art-cri*****.appspot.com #(저희 프로젝트 명으로 수정하세요)
 jwt.secret: d0a********************************************************439

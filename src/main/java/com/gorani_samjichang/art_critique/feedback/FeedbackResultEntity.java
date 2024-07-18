@@ -15,8 +15,8 @@ public class FeedbackResultEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long frid;
-
     private String feedbackType;
+    private String feedbackDisplay;
     private String feedbackContent;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fid")

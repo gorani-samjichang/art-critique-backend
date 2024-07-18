@@ -20,9 +20,6 @@ public class MemberEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long uid;
-//    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-//    @JsonManagedReference
-//    private SNSMapEntity snsMap;
     private String serialNumber;
     private String email;
     private String password;
