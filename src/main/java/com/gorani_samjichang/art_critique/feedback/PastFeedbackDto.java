@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class PastFeedbackDto {
     private String serialNumber;
     private String pictureUrl;
+    private Integer totalScore;
     private Integer version;
     private LocalDateTime createdAt;
     private Boolean isBookmarked;

@@ -31,7 +31,7 @@ public class MemberEntity {
     private String level;
     private LocalDateTime createdAt;
     private String role; // USER, ADMIN 이정도만 생각하는중
-    @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = false)
     @JsonManagedReference
     private List<FeedbackEntity> feedbacks = new ArrayList<>();
 

@@ -72,6 +72,7 @@ public class FeedbackController {
         pythonResponse.setCreatedAt(LocalDateTime.now());
         pythonResponse.setIsPublic(true);
         pythonResponse.setIsBookmarked(false);
+        pythonResponse.setTail(null);
         feedbackRepository.save(pythonResponse);
 
         String serialNumber = "a" + bCryptPasswordEncoder.encode(String.valueOf(pythonResponse.getFid()));
@@ -83,7 +84,6 @@ public class FeedbackController {
         pythonResponse.setPictureUrl(imageUrl);
         feedbackRepository.save(pythonResponse);
 
-
         MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
         me.addFeedback(pythonResponse);
 
@@ -93,7 +93,7 @@ public class FeedbackController {
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
-    RetrieveFeedbackDto retrieveFeedback(@PathVariable("serialNumber") String serialNumber) {
+    RetrieveFeedbackDto retrieveFeedback(@PathVariable("serialNumber") String serialNumber, HttpServletResponse response) {
         Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
         if (feedbackEntity.isPresent()) {
             RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
@@ -118,6 +118,7 @@ public class FeedbackController {
             return dto;
         } else {
             System.out.println("아예 피드백이 없음");
+            response.setStatus(402);
             return null;
         }
     }
@@ -148,21 +149,6 @@ public class FeedbackController {
         return false;
     }
 
-    public static String decodeUnicodeEscapes(String unicodeStr) {
-        StringBuilder sb = new StringBuilder();
-        char[] chars = unicodeStr.toCharArray();
-        for (int i = 0; i < chars.length; i++) {
-            if (chars[i] == '\\' && chars[i + 1] == 'u') {
-                String hex = unicodeStr.substring(i + 2, i + 6);
-                sb.append((char) Integer.parseInt(hex, 16));
-                i += 5;
-            } else {
-                sb.append(chars[i]);
-            }
-        }
-        return sb.toString();
-    }
-
     @GetMapping("/recent-order")
     List<PastFeedbackDto> recentOrder(HttpServletRequest request) {
         MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
@@ -175,15 +161,84 @@ public class FeedbackController {
                     .createdAt(f.getCreatedAt())
                     .version(f.getVersion())
                     .serialNumber(f.getSerialNumber())
+                    .totalScore(f.getTotalScore())
                     .isSelected(false)
                     .build());
         }
+
         feedbackEntities.sort((o1, o2) -> {
-            return o2.getCreatedAt().compareTo(o1.getCreatedAt());
+            return o2.getCreatedAt().compareTo(o1.getCreatedAt()); // 만들어진 순서대로 내림차순
         });
 
         return feedbackEntities;
     }
 
+    @GetMapping("/score-order")
+    List<PastFeedbackDto> scoreOrder(HttpServletRequest request) {
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
+        for (FeedbackEntity f : me.getFeedbacks()) {
+            feedbackEntities.add(PastFeedbackDto
+                    .builder()
+                    .isBookmarked(f.getIsBookmarked())
+                    .pictureUrl(f.getPictureUrl())
+                    .createdAt(f.getCreatedAt())
+                    .version(f.getVersion())
+                    .serialNumber(f.getSerialNumber())
+                    .totalScore(f.getTotalScore())
+                    .isSelected(false)
+                    .build());
+        }
 
+        feedbackEntities.sort((o1, o2) -> {
+            return o2.getTotalScore().compareTo(o1.getTotalScore()); // 만들어진 순서대로 내림차순
+        });
+
+        return feedbackEntities;
+    }
+
+    @PostMapping("/remake/{serialNumber}")
+    String remake(@RequestParam("image") MultipartFile imageFile,
+                  @PathVariable String serialNumber,
+                  HttpServletRequest request,
+                  HttpServletResponse response) throws IOException {
+        System.out.println(imageFile + "  이미지에 대한 재요청");
+        Optional<FeedbackEntity> original = feedbackRepository.findBySerialNumber(serialNumber);
+        if (original.isEmpty()) {
+            response.setStatus(402);
+            return null;
+        }
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        me.removeFeedback(original.get());
+
+        String jsonData = "{ \"name\": \"default\" }";
+
+        FeedbackEntity pythonResponse = webClientBuilder.build()
+                .post()
+                .uri(feedbackServerHost + "/request")
+                .header("Content-Type", "application/json")
+                .bodyValue(jsonData)
+                .retrieve()
+                .bodyToMono(FeedbackEntity.class)
+                .block();
+
+        assert pythonResponse != null;
+        pythonResponse.setCreatedAt(LocalDateTime.now());
+        pythonResponse.setIsPublic(original.get().getIsPublic());
+        pythonResponse.setIsBookmarked(original.get().getIsBookmarked());
+        pythonResponse.setTail(original.get().getFid());
+        pythonResponse.setPictureUrl(original.get().getPictureUrl());
+
+        String sn = "a" + bCryptPasswordEncoder.encode(String.valueOf(pythonResponse.getFid()));
+        sn = sn.replace("$", "-");
+        sn = sn.replace("/", "_");
+        sn = sn.replace(".", "Z");
+        pythonResponse.setSerialNumber(sn);
+
+        feedbackRepository.save(pythonResponse);
+        me.addFeedback(pythonResponse);
+        memberRepository.save(me);
+
+        return "null";
+    }
 }
