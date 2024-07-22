@@ -6,12 +6,16 @@ import com.gorani_samjichang.art_critique.member.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -23,6 +27,10 @@ public class FeedbackController {
     final MemberRepository memberRepository;
     final CommonUtil commonUtil;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
+    final WebClient.Builder webClientBuilder;
+    @Value("${feedback.server.host}")
+    private String feedbackServerHost;
+
     String [] dummyTodayGoodImage = new String [] {
             "https://picsum.photos/id/88/180/160",
             "https://picsum.photos/id/51/200/200",
@@ -48,55 +56,69 @@ public class FeedbackController {
     }
 
     @PostMapping("/request")
-    String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request) throws IOException, InterruptedException {
-        Thread.sleep(1500);
+    String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request) throws IOException {
 
-        FeedbackResultEntity feedbackResultEntity1 = FeedbackResultEntity.builder()
-                .feedbackType("종합평가")
-                .feedbackContent("{\"content\": \"이 그림은 전체적으로 높은 수준의 기술과 창의성을 보여주지만, 일부 세부적인 부분에서 개선할 수 있는 여지가 있습니다. 비율과 해부학적 정확성을 조금 더 현실감 있게 조절하고, 동작과 자세를 더욱 역동적으로 표현하며, 디테일과 정확성을 더 높이고, 조명과 그림자의 사용을 더욱 정교하게 하며, 색채와 채색의 깊이를 더욱 다채롭게 만들면 그림의 완성도가 한층 더 높아질 것입니다.\", \"class\": \"중수\"}")
-                .build();
+        String jsonData = "{ \"name\": \"default\" }";
 
-        FeedbackResultEntity feedbackResultEntity2 = FeedbackResultEntity.builder()
-                .feedbackType("점수")
-                .feedbackContent("{\"item\": [{\"itemName\": \"인체이해도\",\"itemGrade\": 55},{\"itemName\": \"구도와 표현력\",\"itemGrade\": 38},{\"itemName\": \"명암과 그림자\",\"itemGrade\": 26},{\"itemName\": \"비례와 원근\",\"itemGrade\": 52},{\"itemName\": \"색체 이해도\",\"itemGrade\": 83}]}")
-                .build();
+        FeedbackEntity pythonResponse = webClientBuilder.build()
+                .post()
+                .uri(feedbackServerHost + "/request")
+                .header("Content-Type", "application/json")
+                .bodyValue(jsonData)
+                .retrieve()
+                .bodyToMono(FeedbackEntity.class)
+                .block();
 
-        FeedbackEntity feedbackEntity = FeedbackEntity.builder()
-                .createdAt(LocalDateTime.now())
-                .isPublic(true)
-                .usedToken(10L)
-                .version(1)
-                .build();
+        pythonResponse.setCreatedAt(LocalDateTime.now());
+        pythonResponse.setIsPublic(true);
+        pythonResponse.setIsBookmarked(false);
+        pythonResponse.setTail(null);
+        feedbackRepository.save(pythonResponse);
 
-        String serialNumber = "a" + bCryptPasswordEncoder.encode(String.valueOf(feedbackEntity.getFid()));
+        String serialNumber = "a" + bCryptPasswordEncoder.encode(String.valueOf(pythonResponse.getFid()));
         serialNumber = serialNumber.replace("$", "-");
         serialNumber = serialNumber.replace("/", "_");
         serialNumber = serialNumber.replace(".", "Z");
-        System.out.println(serialNumber);
-        feedbackEntity.setSerialNumber(serialNumber);
+        pythonResponse.setSerialNumber(serialNumber);
         String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
-        feedbackEntity.setPictureUrl(imageUrl);
-
-        feedbackEntity.addFeedbackResult(feedbackResultEntity1);
-        feedbackEntity.addFeedbackResult(feedbackResultEntity2);
-        feedbackRepository.save(feedbackEntity);
+        pythonResponse.setPictureUrl(imageUrl);
+        feedbackRepository.save(pythonResponse);
 
         MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
-        me.addFeedback(feedbackEntity);
+        me.addFeedback(pythonResponse);
 
         memberRepository.save(me);
 
-        return feedbackEntity.getSerialNumber();
+        return pythonResponse.getSerialNumber();
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
-    FeedbackEntity retrieveFeedback(@PathVariable("serialNumber") String serialNumber) {
+    RetrieveFeedbackDto retrieveFeedback(@PathVariable("serialNumber") String serialNumber, HttpServletResponse response) {
         Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
         if (feedbackEntity.isPresent()) {
-            System.out.println("잘받음");
-            return feedbackEntity.get();
+            RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
+                    .isBookmarked(feedbackEntity.get().getIsBookmarked())
+                    .version(feedbackEntity.get().getVersion())
+                    .createdAt(feedbackEntity.get().getCreatedAt())
+                    .pictureUrl(feedbackEntity.get().getPictureUrl())
+                    .serialNumber(feedbackEntity.get().getSerialNumber())
+                    .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
+                    .userReview(feedbackEntity.get().getUserReview())
+                    .build();
+
+            List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
+            for (FeedbackResultEntity e : feedbackEntity.get().getFeedbackResults()) {
+                FeedbackResultDto resultDto = new FeedbackResultDto();
+                resultDto.setFeedbackContent(e.getFeedbackContent());
+                resultDto.setFeedbackType(e.getFeedbackType());
+                resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
+                ResultDtoList.add(resultDto);
+            }
+            dto.setFeedbackResults(ResultDtoList);
+            return dto;
         } else {
             System.out.println("아예 피드백이 없음");
+            response.setStatus(402);
             return null;
         }
     }
@@ -127,6 +149,96 @@ public class FeedbackController {
         return false;
     }
 
+    @GetMapping("/recent-order")
+    List<PastFeedbackDto> recentOrder(HttpServletRequest request) {
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
+        for (FeedbackEntity f : me.getFeedbacks()) {
+            feedbackEntities.add(PastFeedbackDto
+                    .builder()
+                    .isBookmarked(f.getIsBookmarked())
+                    .pictureUrl(f.getPictureUrl())
+                    .createdAt(f.getCreatedAt())
+                    .version(f.getVersion())
+                    .serialNumber(f.getSerialNumber())
+                    .totalScore(f.getTotalScore())
+                    .isSelected(false)
+                    .build());
+        }
 
+        feedbackEntities.sort((o1, o2) -> {
+            return o2.getCreatedAt().compareTo(o1.getCreatedAt()); // 만들어진 순서대로 내림차순
+        });
 
+        return feedbackEntities;
+    }
+
+    @GetMapping("/score-order")
+    List<PastFeedbackDto> scoreOrder(HttpServletRequest request) {
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
+        for (FeedbackEntity f : me.getFeedbacks()) {
+            feedbackEntities.add(PastFeedbackDto
+                    .builder()
+                    .isBookmarked(f.getIsBookmarked())
+                    .pictureUrl(f.getPictureUrl())
+                    .createdAt(f.getCreatedAt())
+                    .version(f.getVersion())
+                    .serialNumber(f.getSerialNumber())
+                    .totalScore(f.getTotalScore())
+                    .isSelected(false)
+                    .build());
+        }
+
+        feedbackEntities.sort((o1, o2) -> {
+            return o2.getTotalScore().compareTo(o1.getTotalScore()); // 만들어진 순서대로 내림차순
+        });
+
+        return feedbackEntities;
+    }
+
+    @PostMapping("/remake/{serialNumber}")
+    String remake(@RequestParam("image") MultipartFile imageFile,
+                  @PathVariable String serialNumber,
+                  HttpServletRequest request,
+                  HttpServletResponse response) throws IOException {
+        System.out.println(imageFile + "  이미지에 대한 재요청");
+        Optional<FeedbackEntity> original = feedbackRepository.findBySerialNumber(serialNumber);
+        if (original.isEmpty()) {
+            response.setStatus(402);
+            return null;
+        }
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        me.removeFeedback(original.get());
+
+        String jsonData = "{ \"name\": \"default\" }";
+
+        FeedbackEntity pythonResponse = webClientBuilder.build()
+                .post()
+                .uri(feedbackServerHost + "/request")
+                .header("Content-Type", "application/json")
+                .bodyValue(jsonData)
+                .retrieve()
+                .bodyToMono(FeedbackEntity.class)
+                .block();
+
+        assert pythonResponse != null;
+        pythonResponse.setCreatedAt(LocalDateTime.now());
+        pythonResponse.setIsPublic(original.get().getIsPublic());
+        pythonResponse.setIsBookmarked(original.get().getIsBookmarked());
+        pythonResponse.setTail(original.get().getFid());
+        pythonResponse.setPictureUrl(original.get().getPictureUrl());
+
+        String sn = "a" + bCryptPasswordEncoder.encode(String.valueOf(pythonResponse.getFid()));
+        sn = sn.replace("$", "-");
+        sn = sn.replace("/", "_");
+        sn = sn.replace(".", "Z");
+        pythonResponse.setSerialNumber(sn);
+
+        feedbackRepository.save(pythonResponse);
+        me.addFeedback(pythonResponse);
+        memberRepository.save(me);
+
+        return "null";
+    }
 }

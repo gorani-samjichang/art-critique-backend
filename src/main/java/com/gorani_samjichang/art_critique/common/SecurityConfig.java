@@ -4,6 +4,7 @@ package com.gorani_samjichang.art_critique.common;
 import com.gorani_samjichang.art_critique.member.LoginFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,7 +24,8 @@ import java.util.Collections;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-
+    @Value("${front.server.host}")
+    String frontHost;
     final AuthenticationConfiguration authenticationConfiguration;
     final JwtUtil jwtUtil;
     @Bean
@@ -45,7 +47,7 @@ public class SecurityConfig {
                             public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
 
                                 CorsConfiguration configuration = new CorsConfiguration();
-                                configuration.setAllowedOrigins(Collections.singletonList("http://localhost:5173"));
+                                configuration.setAllowedOrigins(Collections.singletonList(frontHost));
                                 configuration.setAllowedMethods(Collections.singletonList("*"));
                                 configuration.setAllowCredentials(true);
                                 configuration.setAllowedHeaders(Collections.singletonList("*"));

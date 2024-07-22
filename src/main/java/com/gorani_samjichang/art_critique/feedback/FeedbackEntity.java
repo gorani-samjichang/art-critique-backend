@@ -23,6 +23,7 @@ public class FeedbackEntity {
     private Long fid;
     private String serialNumber;
     private String pictureUrl;
+    private Integer totalScore;
     private Integer version;
     private Long usedToken;
     private LocalDateTime createdAt;
@@ -34,7 +35,9 @@ public class FeedbackEntity {
     @Column(columnDefinition = "TEXT")
     private String userReviewDetail;
     private Boolean isPublic;
-    @OneToMany(mappedBy = "feedbackEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private Boolean isBookmarked;
+    private Long tail;
+    @OneToMany(mappedBy = "feedbackEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = false)
     @JsonManagedReference
     private List<FeedbackResultEntity> feedbackResults;
 
