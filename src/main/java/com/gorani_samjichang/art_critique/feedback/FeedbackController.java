@@ -14,10 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/feedback")
@@ -149,6 +146,28 @@ public class FeedbackController {
             return true;
         }
         return false;
+    }
+
+    @GetMapping("/write-order")
+    List<PastFeedbackDto> writeOrder(HttpServletRequest request) {
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
+        for (FeedbackEntity f : me.getFeedbacks()) {
+            feedbackEntities.add(PastFeedbackDto
+                    .builder()
+                    .isBookmarked(f.getIsBookmarked())
+                    .pictureUrl(f.getPictureUrl())
+                    .createdAt(f.getCreatedAt())
+                    .version(f.getVersion())
+                    .serialNumber(f.getSerialNumber())
+                    .totalScore(f.getTotalScore())
+                    .isSelected(false)
+                    .build());
+        }
+
+        feedbackEntities.sort(Comparator.comparing(PastFeedbackDto::getCreatedAt)); //만들어진 순서로 오름차순
+
+        return feedbackEntities;
     }
 
     @GetMapping("/recent-order")

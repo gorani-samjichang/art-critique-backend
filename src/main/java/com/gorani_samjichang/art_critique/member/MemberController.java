@@ -30,6 +30,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/member")
@@ -54,7 +55,7 @@ public class MemberController {
     boolean isLogined() {
         return true;
     }
-    @PostMapping("/public/member-join")
+    @PostMapping("/public/join")
     HashMap<String, String> memberJoin(
             @RequestParam(name = "password", required = false) String password,
             @RequestParam(value = "nickname") String nickname,
@@ -72,7 +73,7 @@ public class MemberController {
                 .role("USER")
                 .build();
 
-        String serialNumber = bCryptPasswordEncoder.encode(memberEntity.getEmail());
+        String serialNumber = UUID.randomUUID().toString();
         memberEntity.setSerialNumber(serialNumber);
         if (password == null) {
             memberEntity.setPassword(bCryptPasswordEncoder.encode(commonUtil.generateSecureRandomString(30)));
@@ -95,6 +96,37 @@ public class MemberController {
         dto.put("role", memberEntity.getRole());
         dto.put("level", memberEntity.getLevel());
         dto.put("nickname", memberEntity.getNickname());
+        return dto;
+    }
+
+    @PostMapping("/edit")
+    HashMap<String, String> memberEdit(
+            @RequestParam(value = "nickname") String nickname,
+            @RequestParam(value = "level", required = false) String level,
+            @RequestParam(value = "profile", required = false) MultipartFile profile,
+            HttpServletRequest request, HttpServletResponse response
+    ) throws IOException {
+        MemberEntity myMemberEntity = memberRepository.findByEmail(request.getAttribute("email").toString());
+        if (myMemberEntity == null) {
+            response.setStatus(401);
+        }
+        assert myMemberEntity != null;
+        myMemberEntity.setNickname(nickname);
+        myMemberEntity.setLevel(level);
+        if (profile != null) {
+            String profile_url = commonUtil.uploadToStorage(profile, myMemberEntity.getSerialNumber());
+            myMemberEntity.setProfile(profile_url);
+        } else {
+            myMemberEntity.setProfile(null);
+        }
+        memberRepository.save(myMemberEntity);
+
+        HashMap<String, String> dto = new HashMap<>();
+        dto.put("email", myMemberEntity.getEmail());
+        dto.put("profile", myMemberEntity.getProfile());
+        dto.put("role", myMemberEntity.getRole());
+        dto.put("level", myMemberEntity.getLevel());
+        dto.put("nickname", myMemberEntity.getNickname());
         return dto;
     }
 
