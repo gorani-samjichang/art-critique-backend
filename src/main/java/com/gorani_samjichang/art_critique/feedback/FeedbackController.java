@@ -56,6 +56,10 @@ public class FeedbackController {
     @PostMapping("/request")
     String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
+        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+        if (me.getCredit() <= 0) {
+            return "noCreditError";
+        }
         String serialNumber = UUID.randomUUID().toString();
         String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
 
@@ -79,8 +83,8 @@ public class FeedbackController {
             pythonResponse.setPictureUrl(imageUrl);
             feedbackRepository.save(pythonResponse);
 
-            MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
             me.addFeedback(pythonResponse);
+            me.setCredit(me.getCredit() - 1);
 
             memberRepository.save(me);
 
@@ -171,7 +175,7 @@ public class FeedbackController {
     }
 
     @GetMapping("/recent-order")
-    List<PastFeedbackDto> recentOrder(HttpServletRequest request) {
+    List<PastFeedbackDto> recentOrder(HttpServletRequest request, HttpServletResponse response) {
         MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
         ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
         for (FeedbackEntity f : me.getFeedbacks()) {
