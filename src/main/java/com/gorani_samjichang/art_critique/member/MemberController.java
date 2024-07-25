@@ -42,7 +42,6 @@ public class MemberController {
     final WebClient.Builder webClientBuilder;
     final JwtUtil jwtUtil;
     final CommonUtil commonUtil;
-    final MemberService memberService;
 
     @Value("${token.verify.prefix}")
     String prefix;
@@ -55,7 +54,6 @@ public class MemberController {
     boolean isLogined() {
         return true;
     }
-
     @PostMapping("/public/member-join")
     HashMap<String, String> memberJoin(
             @RequestParam(name = "password", required = false) String password,
@@ -88,7 +86,7 @@ public class MemberController {
         }
         memberRepository.save(memberEntity);
 
-        String token = jwtUtil.createJwt(email, memberEntity.getRole(), 7 * 24 * 60 * 60 * 1000L);
+        String token = jwtUtil.createJwt(email, memberEntity.getRole(), 7*24*60*60*1000L);
         registerCookie("Authorization", token, -1, response);
 
         HashMap<String, String> dto = new HashMap<>();
@@ -102,24 +100,31 @@ public class MemberController {
 
     @GetMapping("/public/emailCheck/{email}")
     boolean emailCheck(@PathVariable String email) {
-        return memberService.emailCheck(email);
+        return memberRepository.existsByEmail(email);
     }
 
     @GetMapping("/public/nicknameCheck/{nickname}")
     boolean nicknameCheck(@PathVariable String nickname) throws Exception {
-        return memberService.nicknameCheck(nickname);
+        return memberRepository.existsByNickname(nickname);
     }
 
     @GetMapping("/info")
-    MemberDto readMember(HttpServletRequest request) {
-        String email = request.getAttribute("email").toString();
-        return memberService.readMember(email);
+    HashMap<String, String> info(HttpServletRequest request) {
+        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+        if (me == null) return null;
+        HashMap<String, String> dto = new HashMap<>();
+        dto.put("email", me.getEmail());
+        dto.put("profile", me.getProfile());
+        dto.put("role", me.getRole());
+        dto.put("level", me.getLevel());
+        dto.put("nickname", me.getNickname());
+        return dto;
     }
 
     @GetMapping("credit")
     int credit(HttpServletRequest request) {
-        String email = request.getAttribute("email").toString();
-        return memberService.readCredit(email);
+        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+        return me.getCredit();
     }
 
     @GetMapping("/public/logout")
@@ -137,12 +142,13 @@ public class MemberController {
     }
 
     String getRole(String email) {
-        return memberService.readRole(email);
+        MemberEntity me = memberRepository.findByEmail(email);
+        return (me == null) ? null : me.getRole();
     }
 
     @GetMapping("/public/oauth-login/google/{idToken}")
     boolean oauthGoogleLogin(@PathVariable String idToken, HttpServletResponse response) throws UnsupportedEncodingException {
-        GoogleIdToken.Payload payload = webClientBuilder.build()
+        GoogleIdToken.Payload payload =  webClientBuilder.build()
                 .get()
                 .uri("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=" + idToken)
                 .retrieve()
@@ -155,7 +161,7 @@ public class MemberController {
             if (role == null) {
                 return false;
             } else {
-                String token = jwtUtil.createJwt(email, role, 7 * 24 * 60 * 60 * 1000L);
+                String token = jwtUtil.createJwt(email, role, 7*24*60*60*1000L);
                 registerCookie("Authorization", token, -1, response);
                 return true;
             }
@@ -167,9 +173,9 @@ public class MemberController {
 
     @GetMapping("/public/oauth-login/x/{accessToken}/{tokenSecret}/{uid}")
     boolean oauthXLogin(@PathVariable("accessToken") String accessToken,
-                        @PathVariable("tokenSecret") String tokenSecret,
-                        @PathVariable String uid,
-                        HttpServletResponse response) {
+                          @PathVariable("tokenSecret") String tokenSecret,
+                          @PathVariable String uid,
+                          HttpServletResponse response) {
 
         try {
             validateTwitterLogin(accessToken, tokenSecret);
@@ -184,7 +190,7 @@ public class MemberController {
             if (role == null) {
                 return false;
             } else {
-                String token = jwtUtil.createJwt(email, role, 7 * 24 * 60 * 60 * 1000L);
+                String token = jwtUtil.createJwt(email, role, 7*24*60*60*1000L);
                 registerCookie("Authorization", token, -1, response);
                 return true;
             }
@@ -198,7 +204,7 @@ public class MemberController {
     @GetMapping("/public/temp-token/{email}")
     void tempToken(@PathVariable String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
         if (email.startsWith(prefix)) {
-            String[] split = email.split("@");
+            String [] split = email.split("@");
             if (split[1].equals("google")) {
                 GoogleIdToken.Payload payload = webClientBuilder.build()
                         .get()
@@ -221,7 +227,7 @@ public class MemberController {
                 email = firebaseEmail;
             }
         }
-        String token = jwtUtil.createEmailJwt(email, 60 * 60 * 1000L);
+        String token = jwtUtil.createEmailJwt(email, 60*60*1000L);
         registerCookie("token", token, -1, response);
     }
 
@@ -231,8 +237,8 @@ public class MemberController {
         if (list == null) {
             return null;
         }
-        for (Cookie cookie : list) {
-            if (cookie.getName().equals("token")) {
+        for(Cookie cookie : list) {
+            if(cookie.getName().equals("token")) {
                 token = cookie.getValue();
                 break;
             }
@@ -244,8 +250,8 @@ public class MemberController {
     }
 
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
-        String encodedValue = URLEncoder.encode(token, "UTF-8");
-        Cookie cookie = new Cookie(key, encodedValue);
+        String encodedValue = URLEncoder.encode( token, "UTF-8" );
+        Cookie cookie = new Cookie( key, encodedValue);
         cookie.setMaxAge(maxAge);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);

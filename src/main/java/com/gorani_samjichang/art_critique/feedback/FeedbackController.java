@@ -14,9 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/feedback")
@@ -39,40 +37,41 @@ public class FeedbackController {
     }
 
     @PostMapping("/request")
-    String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request) throws IOException {
+    String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
-        String jsonData = "{ \"name\": \"default\" }";
-
-        FeedbackEntity pythonResponse = webClientBuilder.build()
-                .post()
-                .uri(feedbackServerHost + "/request")
-                .header("Content-Type", "application/json")
-                .bodyValue(jsonData)
-                .retrieve()
-                .bodyToMono(FeedbackEntity.class)
-                .block();
-
-        pythonResponse.setCreatedAt(LocalDateTime.now());
-        pythonResponse.setIsPublic(true);
-        pythonResponse.setIsBookmarked(false);
-        pythonResponse.setTail(null);
-        feedbackRepository.save(pythonResponse);
-
-        String serialNumber = "a" + bCryptPasswordEncoder.encode(String.valueOf(pythonResponse.getFid()));
-        serialNumber = serialNumber.replace("$", "-");
-        serialNumber = serialNumber.replace("/", "_");
-        serialNumber = serialNumber.replace(".", "Z");
-        pythonResponse.setSerialNumber(serialNumber);
+        String serialNumber = UUID.randomUUID().toString();
         String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
-        pythonResponse.setPictureUrl(imageUrl);
-        feedbackRepository.save(pythonResponse);
 
-        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
-        me.addFeedback(pythonResponse);
+        String jsonData = "{ \"name\": " + "\"imageUrl\"" + "}";
 
-        memberRepository.save(me);
+        try {
+            FeedbackEntity pythonResponse = webClientBuilder.build()
+                    .post()
+                    .uri(feedbackServerHost + "/request")
+                    .header("Content-Type", "application/json")
+                    .bodyValue(jsonData)
+                    .retrieve()
+                    .bodyToMono(FeedbackEntity.class)
+                    .block();
 
-        return pythonResponse.getSerialNumber();
+            pythonResponse.setCreatedAt(LocalDateTime.now());
+            pythonResponse.setIsPublic(true);
+            pythonResponse.setIsBookmarked(false);
+            pythonResponse.setTail(null);
+            pythonResponse.setSerialNumber(serialNumber);
+            pythonResponse.setPictureUrl(imageUrl);
+            feedbackRepository.save(pythonResponse);
+
+            MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+            me.addFeedback(pythonResponse);
+
+            memberRepository.save(me);
+
+            return pythonResponse.getSerialNumber();
+        } catch (Exception e) {
+            response.setStatus(501);
+            return null;
+        }
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
@@ -132,7 +131,8 @@ public class FeedbackController {
         return false;
     }
 
-    @GetMapping("/recent-order")
+
+    @GetMapping("/write-order")
     List<PastFeedbackDto> recentOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
         String email = request.getAttribute("email").toString();
         return feedbackService.getFeedbackRecentOrder(email, page);
@@ -142,6 +142,27 @@ public class FeedbackController {
     List<PastFeedbackDto> scoreOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
         String email = request.getAttribute("email").toString();
         return feedbackService.getFeedbackTotalScoreOrder(email, page);
+    }
+
+    @GetMapping("/bookmark")
+    List<PastFeedbackDto> bookmark(HttpServletRequest request) {
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        ArrayList<PastFeedbackDto> feedbackDtoList = new ArrayList<>();
+        for (FeedbackEntity f : me.getFeedbacks()) {
+            if (!f.getIsBookmarked()) continue;
+            feedbackDtoList.add(PastFeedbackDto
+                    .builder()
+                    .isBookmarked(f.getIsBookmarked())
+                    .pictureUrl(f.getPictureUrl())
+                    .createdAt(f.getCreatedAt())
+                    .version(f.getVersion())
+                    .serialNumber(f.getSerialNumber())
+                    .totalScore(f.getTotalScore())
+                    .isSelected(false)
+                    .build());
+        }
+
+        return feedbackDtoList;
     }
 
     @PostMapping("/remake/{serialNumber}")
@@ -176,10 +197,7 @@ public class FeedbackController {
         pythonResponse.setTail(original.get().getFid());
         pythonResponse.setPictureUrl(original.get().getPictureUrl());
 
-        String sn = "a" + bCryptPasswordEncoder.encode(String.valueOf(pythonResponse.getFid()));
-        sn = sn.replace("$", "-");
-        sn = sn.replace("/", "_");
-        sn = sn.replace(".", "Z");
+        String sn = UUID.randomUUID().toString();
         pythonResponse.setSerialNumber(sn);
 
         feedbackRepository.save(pythonResponse);
@@ -187,5 +205,35 @@ public class FeedbackController {
         memberRepository.save(me);
 
         return "null";
+    }
+
+    @PostMapping("/turn-off-bookmark/{serialNumber}")
+    boolean turnOffBookMark(@PathVariable String serialNumber, HttpServletResponse response) {
+        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+        if (feedbackEntity.isEmpty()) {
+            response.setStatus(401);
+            return false;
+        }
+        if (!feedbackEntity.get().getIsBookmarked()) {
+            return false;
+        }
+        feedbackEntity.get().setIsBookmarked(false);
+        feedbackRepository.save(feedbackEntity.get());
+        return true;
+    }
+
+    @PostMapping("/turn-on-bookmark/{serialNumber}")
+    boolean turnOnBookMark(@PathVariable String serialNumber, HttpServletResponse response) {
+        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+        if (feedbackEntity.isEmpty()) {
+            response.setStatus(401);
+            return false;
+        }
+        if (feedbackEntity.get().getIsBookmarked()) {
+            return false;
+        }
+        feedbackEntity.get().setIsBookmarked(true);
+        feedbackRepository.save(feedbackEntity.get());
+        return true;
     }
 }

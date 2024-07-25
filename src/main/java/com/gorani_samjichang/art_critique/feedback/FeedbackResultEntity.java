@@ -17,6 +17,7 @@ public class FeedbackResultEntity {
     private Long frid;
     private String feedbackType;
     private String feedbackDisplay;
+    @Column(columnDefinition = "TEXT")
     private String feedbackContent;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fid")
