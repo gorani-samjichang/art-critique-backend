@@ -137,8 +137,7 @@ public class MemberController {
     }
 
     String getRole(String email) {
-        MemberEntity me = memberRepository.findByEmail(email);
-        return (me == null) ? null : me.getRole();
+        return memberService.readRole(email);
     }
 
     @GetMapping("/public/oauth-login/google/{idToken}")
