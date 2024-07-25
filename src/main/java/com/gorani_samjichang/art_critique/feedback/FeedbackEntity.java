@@ -25,8 +25,8 @@ public class FeedbackEntity {
     private String pictureUrl;
     private Integer totalScore;
     private Integer version;
-    private Long inputToken;
-    private Long outputToken;
+    private Long inputTokens;
+    private Long outputTokens;
     private LocalDateTime createdAt;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uid")
