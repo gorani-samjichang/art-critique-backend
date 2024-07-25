@@ -33,8 +33,8 @@ public class FeedbackController {
     final WebClient.Builder webClientBuilder;
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
-
-    String [] dummyTodayGoodImage = new String [] {
+    final FeedbackService feedbackService;
+    String[] dummyTodayGoodImage = new String[]{
             "https://picsum.photos/id/88/180/160",
             "https://picsum.photos/id/51/200/200",
             "https://picsum.photos/id/50/260/240",
@@ -53,8 +53,8 @@ public class FeedbackController {
     };
 
     @GetMapping("/public/good-image")
-    String [] getGoodImage() {
-        String [] todayGoodImage = dummyTodayGoodImage;
+    String[] getGoodImage() {
+        String[] todayGoodImage = dummyTodayGoodImage;
         return todayGoodImage;
     }
 
@@ -153,41 +153,15 @@ public class FeedbackController {
     }
 
     @GetMapping("/recent-order")
-    List<PastFeedbackDto> recentOrder(HttpServletRequest request) {
-        List<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        Pageable pageable= PageRequest.of(0,4);
-        for (FeedbackEntity f : feedbackRepository.findByMemberEntityEmailOrderByCreatedAtDesc(request.getAttribute("email").toString(),pageable)) {
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-        return feedbackEntities;
+    List<PastFeedbackDto> recentOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
+        String email = request.getAttribute("email").toString();
+        return feedbackService.getFeedbackRecentOrder(email, page);
     }
 
     @GetMapping("/score-order")
-    List<PastFeedbackDto> scoreOrder(HttpServletRequest request) {
-        List<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        Pageable pageable= PageRequest.of(0,4);
-        for (FeedbackEntity f : feedbackRepository.findByMemberEntityEmailOrderByTotalScoreAsc(request.getAttribute("email").toString(),pageable)) {
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-        return feedbackEntities;
+    List<PastFeedbackDto> scoreOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
+        String email = request.getAttribute("email").toString();
+        return feedbackService.getFeedbackTotalScoreOrder(email, page);
     }
 
     @PostMapping("/remake/{serialNumber}")
