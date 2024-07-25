@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> {
     Optional<FeedbackEntity> findBySerialNumber(String serialNumber);
-    Slice<FeedbackEntity> findByMemberEntityEmail(String email, Pageable pageable);
+    Slice<FeedbackEntity> findByMemberEntityEmailOrderByCreatedAtDesc(String email, Pageable pageable);
+    Slice<FeedbackEntity> findByMemberEntityEmailOrderByTotalScoreAsc(String email, Pageable pageable);
 }

@@ -155,8 +155,8 @@ public class FeedbackController {
     @GetMapping("/recent-order")
     List<PastFeedbackDto> recentOrder(HttpServletRequest request) {
         List<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        Pageable pageable= PageRequest.of(0,4, Sort.by("createdAt").descending());
-        for (FeedbackEntity f : feedbackRepository.findByMemberEntityEmail(request.getAttribute("email").toString(),pageable)) {
+        Pageable pageable= PageRequest.of(0,4);
+        for (FeedbackEntity f : feedbackRepository.findByMemberEntityEmailOrderByCreatedAtDesc(request.getAttribute("email").toString(),pageable)) {
             feedbackEntities.add(PastFeedbackDto
                     .builder()
                     .isBookmarked(f.getIsBookmarked())
@@ -173,9 +173,9 @@ public class FeedbackController {
 
     @GetMapping("/score-order")
     List<PastFeedbackDto> scoreOrder(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
+        List<PastFeedbackDto> feedbackEntities = new ArrayList<>();
+        Pageable pageable= PageRequest.of(0,4);
+        for (FeedbackEntity f : feedbackRepository.findByMemberEntityEmailOrderByTotalScoreAsc(request.getAttribute("email").toString(),pageable)) {
             feedbackEntities.add(PastFeedbackDto
                     .builder()
                     .isBookmarked(f.getIsBookmarked())
@@ -187,11 +187,6 @@ public class FeedbackController {
                     .isSelected(false)
                     .build());
         }
-
-        feedbackEntities.sort((o1, o2) -> {
-            return o2.getTotalScore().compareTo(o1.getTotalScore()); // 만들어진 순서대로 내림차순
-        });
-
         return feedbackEntities;
     }
 
