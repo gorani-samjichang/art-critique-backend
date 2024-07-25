@@ -7,9 +7,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,28 +31,11 @@ public class FeedbackController {
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
     final FeedbackService feedbackService;
-    String[] dummyTodayGoodImage = new String[]{
-            "https://picsum.photos/id/88/180/160",
-            "https://picsum.photos/id/51/200/200",
-            "https://picsum.photos/id/50/260/240",
-            "https://picsum.photos/id/9/180/160",
-            "https://picsum.photos/id/55/260/280",
-            "https://picsum.photos/id/70/220/220",
-            "https://picsum.photos/id/57/160/300",
-            "https://picsum.photos/id/19/300/120",
-            "https://picsum.photos/id/99/100/100",
-            "https://picsum.photos/id/26/300/260",
-            "https://picsum.photos/id/71/120/120",
-            "https://picsum.photos/id/69/160/160",
-            "https://picsum.photos/id/39/100/120",
-            "https://picsum.photos/id/27/240/160",
-            "https://picsum.photos/id/15/240/140"
-    };
+
 
     @GetMapping("/public/good-image")
     String[] getGoodImage() {
-        String[] todayGoodImage = dummyTodayGoodImage;
-        return todayGoodImage;
+        return feedbackService.getGoodImage();
     }
 
     @PostMapping("/request")

@@ -14,6 +14,28 @@ import java.util.List;
 public class FeedbackService {
     private final FeedbackRepository feedbackRepository;
     private final int PAGESIZE = 4;
+    String[] dummyTodayGoodImage = new String[]{
+            "https://picsum.photos/id/88/180/160",
+            "https://picsum.photos/id/51/200/200",
+            "https://picsum.photos/id/50/260/240",
+            "https://picsum.photos/id/9/180/160",
+            "https://picsum.photos/id/55/260/280",
+            "https://picsum.photos/id/70/220/220",
+            "https://picsum.photos/id/57/160/300",
+            "https://picsum.photos/id/19/300/120",
+            "https://picsum.photos/id/99/100/100",
+            "https://picsum.photos/id/26/300/260",
+            "https://picsum.photos/id/71/120/120",
+            "https://picsum.photos/id/69/160/160",
+            "https://picsum.photos/id/39/100/120",
+            "https://picsum.photos/id/27/240/160",
+            "https://picsum.photos/id/15/240/140"
+    };
+
+    String[] getGoodImage() {
+        String[] todayGoodImage = dummyTodayGoodImage;
+        return todayGoodImage;
+    }
 
     public List<PastFeedbackDto> getFeedbackRecentOrder(String email, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
