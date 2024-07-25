@@ -7,6 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -151,9 +154,9 @@ public class FeedbackController {
 
     @GetMapping("/recent-order")
     List<PastFeedbackDto> recentOrder(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
+        List<PastFeedbackDto> feedbackEntities = new ArrayList<>();
+        Pageable pageable= PageRequest.of(0,4, Sort.by("createdAt").descending());
+        for (FeedbackEntity f : feedbackRepository.findByMemberEntityEmail(request.getAttribute("email").toString(),pageable)) {
             feedbackEntities.add(PastFeedbackDto
                     .builder()
                     .isBookmarked(f.getIsBookmarked())
@@ -165,11 +168,6 @@ public class FeedbackController {
                     .isSelected(false)
                     .build());
         }
-
-        feedbackEntities.sort((o1, o2) -> {
-            return o2.getCreatedAt().compareTo(o1.getCreatedAt()); // 만들어진 순서대로 내림차순
-        });
-
         return feedbackEntities;
     }
 
