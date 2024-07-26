@@ -12,4 +12,6 @@ public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> 
     Slice<FeedbackEntity> findByMemberEntityEmailOrderByCreatedAtDesc(String email, Pageable pageable);
 
     Slice<FeedbackEntity> findByMemberEntityEmailOrderByTotalScoreDesc(String email, Pageable pageable);
+
+    Slice<FeedbackEntity> findByMemberEntityEmailOrderByCreatedAtAsc(String email, Pageable pageable);
 }

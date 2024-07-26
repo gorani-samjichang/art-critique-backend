@@ -42,6 +42,11 @@ public class FeedbackService {
         Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityEmailOrderByCreatedAtDesc(email, pageable);
         return FeedbackEntityToDto(feedbackEntities);
     }
+    public List<PastFeedbackDto> getFeedbackCreatedAtOrder(String email, int page) {
+        Pageable pageable = PageRequest.of(page, PAGESIZE);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityEmailOrderByCreatedAtAsc(email, pageable);
+        return FeedbackEntityToDto(feedbackEntities);
+    }
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(String email, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);

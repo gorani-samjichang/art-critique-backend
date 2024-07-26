@@ -131,8 +131,13 @@ public class FeedbackController {
         return false;
     }
 
-
     @GetMapping("/write-order")
+    List<PastFeedbackDto> writeOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
+        String email = request.getAttribute("email").toString();
+        return feedbackService.getFeedbackCreatedAtOrder(email, page);
+    }
+
+    @GetMapping("/recent-order")
     List<PastFeedbackDto> recentOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
         String email = request.getAttribute("email").toString();
         return feedbackService.getFeedbackRecentOrder(email, page);
