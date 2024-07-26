@@ -14,7 +14,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/feedback")
@@ -28,29 +31,12 @@ public class FeedbackController {
     final WebClient.Builder webClientBuilder;
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
+    final FeedbackService feedbackService;
 
-    String [] dummyTodayGoodImage = new String [] {
-            "https://picsum.photos/id/88/180/160",
-            "https://picsum.photos/id/51/200/200",
-            "https://picsum.photos/id/50/260/240",
-            "https://picsum.photos/id/9/180/160",
-            "https://picsum.photos/id/55/260/280",
-            "https://picsum.photos/id/70/220/220",
-            "https://picsum.photos/id/57/160/300",
-            "https://picsum.photos/id/19/300/120",
-            "https://picsum.photos/id/99/100/100",
-            "https://picsum.photos/id/26/300/260",
-            "https://picsum.photos/id/71/120/120",
-            "https://picsum.photos/id/69/160/160",
-            "https://picsum.photos/id/39/100/120",
-            "https://picsum.photos/id/27/240/160",
-            "https://picsum.photos/id/15/240/140"
-    };
 
     @GetMapping("/public/good-image")
-    String [] getGoodImage() {
-        String [] todayGoodImage = dummyTodayGoodImage;
-        return todayGoodImage;
+    String[] getGoodImage() {
+        return feedbackService.getGoodImage();
     }
 
     @PostMapping("/request")
@@ -89,7 +75,7 @@ public class FeedbackController {
             memberRepository.save(me);
 
             return pythonResponse.getSerialNumber();
-        } catch(Exception e) {
+        } catch (Exception e) {
             response.setStatus(501);
             return null;
         }
@@ -153,73 +139,21 @@ public class FeedbackController {
     }
 
     @GetMapping("/write-order")
-    List<PastFeedbackDto> writeOrder(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-
-        feedbackEntities.sort(Comparator.comparing(PastFeedbackDto::getCreatedAt)); //만들어진 순서로 오름차순
-
-        return feedbackEntities;
+    List<PastFeedbackDto> writeOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
+        String email = request.getAttribute("email").toString();
+        return feedbackService.getFeedbackCreatedAtOrder(email, page);
     }
 
     @GetMapping("/recent-order")
-    List<PastFeedbackDto> recentOrder(HttpServletRequest request, HttpServletResponse response) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-
-        feedbackEntities.sort((o1, o2) -> {
-            return o2.getCreatedAt().compareTo(o1.getCreatedAt()); // 만들어진 순서대로 내림차순
-        });
-
-        return feedbackEntities;
+    List<PastFeedbackDto> recentOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
+        String email = request.getAttribute("email").toString();
+        return feedbackService.getFeedbackRecentOrder(email, page);
     }
 
     @GetMapping("/score-order")
-    List<PastFeedbackDto> scoreOrder(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-
-        feedbackEntities.sort((o1, o2) -> {
-            return o2.getTotalScore().compareTo(o1.getTotalScore()); // 만들어진 순서대로 내림차순
-        });
-
-        return feedbackEntities;
+    List<PastFeedbackDto> scoreOrder(HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page) {
+        String email = request.getAttribute("email").toString();
+        return feedbackService.getFeedbackTotalScoreOrder(email, page);
     }
 
     @GetMapping("/bookmark")
