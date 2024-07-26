@@ -43,3 +43,9 @@ spring:
 ```
 
 5. IDE에서 실행버튼을 누르세요
+---
+## SQLite application.yml
+```yml
+spring.datasource.url: jdbc:sqlite:mydb.db
+spring.datasource.driver-class-name: org.sqlite.JDBC
+```
