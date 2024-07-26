@@ -39,3 +39,6 @@ out/
 *.yml
 
 art-critique-firebase-adminsdk-yiwby-e882eac9b9.json
+
+### Database (SQLite) ###
+*.db
