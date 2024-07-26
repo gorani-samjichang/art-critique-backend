@@ -14,7 +14,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/feedback")
@@ -39,6 +42,10 @@ public class FeedbackController {
     @PostMapping("/request")
     String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
+        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+        if (me.getCredit() <= 0) {
+            return "noCreditError";
+        }
         String serialNumber = UUID.randomUUID().toString();
         String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
 
@@ -62,8 +69,8 @@ public class FeedbackController {
             pythonResponse.setPictureUrl(imageUrl);
             feedbackRepository.save(pythonResponse);
 
-            MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
             me.addFeedback(pythonResponse);
+            me.setCredit(me.getCredit() - 1);
 
             memberRepository.save(me);
 

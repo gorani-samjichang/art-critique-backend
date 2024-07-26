@@ -34,6 +34,10 @@ dependencies {
     //mysql
     implementation 'mysql:mysql-connector-java:8.0.27'
 
+    //sqlite
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    implementation 'org.hibernate.orm:hibernate-community-dialects:6.5.2.Final'
+
     // 롬복
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

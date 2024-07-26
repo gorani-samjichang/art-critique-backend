@@ -68,7 +68,7 @@ public class MemberController {
         MemberEntity memberEntity = MemberEntity.builder()
                 .email(email)
                 .createdAt(LocalDateTime.now())
-                .credit(0)
+                .credit(1)
                 .nickname(nickname)
                 .isDeleted(false)
                 .role("USER")
