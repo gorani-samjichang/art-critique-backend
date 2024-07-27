@@ -36,12 +36,12 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class MemberService {
-    private final MemberRepository memberRepository;
     private final JwtUtil jwtUtil;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
     final AuthenticationManagerBuilder authenticationManagerBuilder;
     final WebClient.Builder webClientBuilder;
     final CommonUtil commonUtil;
+    private final MemberManager memberManager;
 
     @Value("${token.verify.prefix}")
     String prefix;
@@ -51,23 +51,23 @@ public class MemberService {
     String twitterSecret;
 
     public boolean emailCheck(String email) {
-        return memberRepository.existsByEmail(email);
+        return memberManager.existsByEmail(email);
     }
 
     public boolean nicknameCheck(String nickname) {
-        return memberRepository.existsByNickname(nickname);
+        return memberManager.existsByNickname(nickname);
     }
 
     public MemberDto readMember(String email) {
-        return memberEntityToDto(findValidMember(email));
+        return memberEntityToDto(memberManager.findValidMember(email));
     }
 
     public int readCredit(String email) {
-        return findValidMember(email).getCredit();
+        return memberManager.findValidMember(email).getCredit();
     }
 
     public String readRole(String email) {
-        return findValidMember(email).getRole();
+        return memberManager.findValidMember(email).getRole();
     }
 
     public MemberDto CreateMember(String pw, String nickname, String level, MultipartFile profile) {
@@ -110,19 +110,6 @@ public class MemberService {
         response.addCookie(myCookie);
     }
 
-    private MemberEntity findMember(String email) {
-        MemberEntity member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("No Such a Email"));
-        return member;
-    }
-
-    private MemberEntity findValidMember(String email) {
-        MemberEntity member = findMember(email);
-        if (member.getIsDeleted()) {
-            throw new UserNotValidException("Invalid Email");
-        }
-        return member;
-    }
 
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
         String encodedValue = URLEncoder.encode(token, "UTF-8");
@@ -188,7 +175,7 @@ public class MemberService {
             String profile_url = commonUtil.uploadToStorage(profile, serialNumber);
             memberEntity.setProfile(profile_url);
         }
-        memberRepository.save(memberEntity);
+        memberManager.save(memberEntity);
 
         String token = jwtUtil.createJwt(email, memberEntity.getRole(), 7 * 24 * 60 * 60 * 1000L);
         registerCookie("Authorization", token, -1, response);
@@ -203,7 +190,7 @@ public class MemberService {
             HttpServletRequest request
     ) throws IOException {
         String email = request.getAttribute("email").toString();
-        MemberEntity memberEntity = findValidMember(email);
+        MemberEntity memberEntity = memberManager.findValidMember(email);
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {
@@ -212,7 +199,7 @@ public class MemberService {
         } else {
             memberEntity.setProfile(null);
         }
-        memberRepository.save(memberEntity);
+        memberManager.save(memberEntity);
 
         return memberEntityToDto(memberEntity);
     }

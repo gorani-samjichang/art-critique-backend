@@ -19,8 +19,6 @@ import java.io.UnsupportedEncodingException;
 @RequiredArgsConstructor
 public class MemberController {
     final MemberService memberService;
-    final MemberRepository memberRepository;
-
 
     @GetMapping("is-logined")
     boolean isLogined() {
