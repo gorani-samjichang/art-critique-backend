@@ -23,7 +23,7 @@ public class TestController {
 
     @PostConstruct
     void makeMember() {
-        MemberEntity me = MemberEntity.builder().email("aa@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).isDeleted(false).credit(19).nickname("ggggg").role("USER").build();
+        MemberEntity me = MemberEntity.builder().email("aa@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).serialNumber("efe1-22r3f3f133-f14f4f4").isDeleted(false).credit(19).nickname("ggggg").role("USER").isDeleted(false).build();
         memberRepository.save(me);
     }
 

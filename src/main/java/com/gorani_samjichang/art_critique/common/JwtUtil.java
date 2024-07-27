@@ -24,14 +24,18 @@ public class JwtUtil {
     public String getRole(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("role", String.class);
     }
+    public String getSerialNumber(String token) {
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("serialNumber", String.class);
+    }
 
     public Boolean isExpired(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
     }
 
-    public String createJwt(String email, String role, Long expireMs) {
+    public String createJwt(String email, String serialNumber, String role, Long expireMs) {
         return Jwts.builder()
                 .claim("email", email)
+                .claim("serialNumber", serialNumber)
                 .claim("role", role)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expireMs))

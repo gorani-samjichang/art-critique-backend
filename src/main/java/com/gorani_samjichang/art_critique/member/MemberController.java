@@ -64,17 +64,17 @@ public class MemberController {
             HttpServletRequest request, HttpServletResponse response) throws IOException {
 
         String email = emailTokenValidation(request);
+        String serialNumber = UUID.randomUUID().toString();
         MemberEntity memberEntity = MemberEntity.builder()
                 .email(email)
                 .createdAt(LocalDateTime.now())
                 .credit(1)
                 .nickname(nickname)
                 .isDeleted(false)
+                .serialNumber(serialNumber)
                 .role("USER")
                 .build();
 
-        String serialNumber = UUID.randomUUID().toString();
-        memberEntity.setSerialNumber(serialNumber);
         if (password == null) {
             memberEntity.setPassword(bCryptPasswordEncoder.encode(commonUtil.generateSecureRandomString(30)));
         } else {
@@ -87,7 +87,7 @@ public class MemberController {
         }
         memberRepository.save(memberEntity);
 
-        String token = jwtUtil.createJwt(email, memberEntity.getRole(), 7*24*60*60*1000L);
+        String token = jwtUtil.createJwt(email, serialNumber, memberEntity.getRole(), 7*24*60*60*1000L);
         registerCookie("Authorization", token, -1, response);
 
         HashMap<String, String> dto = new HashMap<>();
@@ -173,9 +173,9 @@ public class MemberController {
         return "[{\"value\": \"newbie\",\"display\": \"입문\",\"color\": \"rgb(245,125,125)\"},{\"value\": \"chobo\",\"display\": \"초보\",\"color\": \"rgb(214, 189, 81)\"},{\"value\": \"intermediate\",\"display\": \"중수\",\"color\": \"rgb(82, 227, 159)\"},{\"value\": \"gosu\",\"display\": \"고수\",\"color\": \"rgb(70, 104, 227)\"}]";
     }
 
-    String getRole(String email) {
-        MemberEntity me = memberRepository.findByEmail(email);
-        return (me == null) ? null : me.getRole();
+    String [] getTokenInfo(String email) {
+        MemberEntity me = memberRepository.findByEmailAndIsDeleted(email, false);
+        return (me == null) ? null : new String [] {me.getSerialNumber(), me.getRole()};
     }
 
     @GetMapping("/public/oauth-login/google/{idToken}")
@@ -189,11 +189,11 @@ public class MemberController {
         String email = null;
         if (payload != null) {
             email = payload.getEmail();
-            String role = getRole(email);
-            if (role == null) {
+            String [] jwtInfo = getTokenInfo(email);
+            if (jwtInfo == null) {
                 return false;
             } else {
-                String token = jwtUtil.createJwt(email, role, 7*24*60*60*1000L);
+                String token = jwtUtil.createJwt(email, jwtInfo[0], jwtInfo[1], 7*24*60*60*1000L);
                 registerCookie("Authorization", token, -1, response);
                 return true;
             }
@@ -218,11 +218,11 @@ public class MemberController {
                 email = email + "@twitter.com";
             }
 
-            String role = getRole(email);
-            if (role == null) {
+            String [] jwtInfo = getTokenInfo(email);
+            if (jwtInfo == null) {
                 return false;
             } else {
-                String token = jwtUtil.createJwt(email, role, 7*24*60*60*1000L);
+                String token = jwtUtil.createJwt(email, jwtInfo[0], jwtInfo[1], 7*24*60*60*1000L);
                 registerCookie("Authorization", token, -1, response);
                 return true;
             }
