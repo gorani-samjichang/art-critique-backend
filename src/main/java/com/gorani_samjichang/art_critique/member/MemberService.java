@@ -18,6 +18,7 @@ import oauth.signpost.exception.OAuthMessageSignerException;
 import org.apache.http.client.methods.HttpGet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -217,7 +218,7 @@ public class MemberService {
                 return true;
             }
         } else {
-            response.setStatus(401);
+            response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
         }
         return false;
     }
