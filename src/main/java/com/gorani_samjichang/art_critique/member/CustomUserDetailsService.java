@@ -1,5 +1,6 @@
 package com.gorani_samjichang.art_critique.member;
 
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,10 +14,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        MemberEntity memberEntity = memberRepository.findByEmail(email);
-        if (memberEntity != null) {
-            return new CustomUserDetails(memberEntity);
-        }
-        return null;
+        MemberEntity memberEntity = memberRepository.findByEmail(email).orElseThrow(()->new UserNotFoundException("No such a email"));
+        return new CustomUserDetails(memberEntity);
     }
 }

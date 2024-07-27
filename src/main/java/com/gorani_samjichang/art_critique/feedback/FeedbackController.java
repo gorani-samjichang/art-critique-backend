@@ -1,6 +1,8 @@
 package com.gorani_samjichang.art_critique.feedback;
 
 import com.gorani_samjichang.art_critique.common.CommonUtil;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,7 +44,7 @@ public class FeedbackController {
     @PostMapping("/request")
     String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
-        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email"))).orElseThrow(()-> new UserNotFoundException("No such a email"));
         if (me.getCredit() <= 0) {
             return "noCreditError";
         }
@@ -158,7 +160,7 @@ public class FeedbackController {
 
     @GetMapping("/bookmark")
     List<PastFeedbackDto> bookmark(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString()).orElseThrow(()->new UserNotFoundException("No such a email"));
         ArrayList<PastFeedbackDto> feedbackDtoList = new ArrayList<>();
         for (FeedbackEntity f : me.getFeedbacks()) {
             if (!f.getIsBookmarked()) continue;
@@ -188,7 +190,7 @@ public class FeedbackController {
             response.setStatus(402);
             return null;
         }
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString()).orElseThrow(()->new UserNotFoundException("No such a email"));
         me.removeFeedback(original.get());
 
         String jsonData = "{ \"name\": \"default\" }";
