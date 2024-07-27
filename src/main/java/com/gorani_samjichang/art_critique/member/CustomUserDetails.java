@@ -37,4 +37,7 @@ public class CustomUserDetails implements UserDetails {
     public String getRole() {
         return memberEntity.getRole();
     }
+    public String getSerialNumber() {
+        return memberEntity.getSerialNumber();
+    }
 }

@@ -39,9 +39,11 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         String email = jwtUtil.getEmail(token);
         String role = jwtUtil.getRole(token);
+        String serialNumber = jwtUtil.getSerialNumber(token);
+
         MemberEntity memberEntity = MemberEntity.builder()
                 .email(email)
-                .password("temp")
+                .serialNumber(serialNumber)
                 .role(role)
                 .build();
 

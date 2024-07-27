@@ -1,8 +1,13 @@
 package com.gorani_samjichang.art_critique.plan;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.gorani_samjichang.art_critique.member.CustomUserDetails;
+import com.gorani_samjichang.art_critique.member.MemberRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
@@ -11,7 +16,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/plan")
+@RequiredArgsConstructor
 public class PlanController {
+    final MemberRepository memberRepository;
     List<PlanVo> prepaymentPlans = new ArrayList<>();
     List<PlanVo> subscribePlans = new ArrayList<>();
     @PostConstruct
@@ -32,5 +39,34 @@ public class PlanController {
         dto.put("prepaymentAmountOptionList", prepaymentPlans);
         dto.put("subscribeAmountOptionList", subscribePlans);
         return dto;
+    }
+
+    @PostMapping("/prepaymentSelect/{index}")
+    ResponseEntity<Void> prepaymentSelect(@PathVariable String index, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        boolean payResult = isPaymentSuccess();
+
+//        System.out.println(userDetails.getUsername());
+//        System.out.println(userDetails.getSerialNumber());
+//        System.out.println(userDetails.getRole());
+        if (!payResult) {
+            return new ResponseEntity<>(HttpStatusCode.valueOf(501));
+        }
+        return new ResponseEntity<>(HttpStatusCode.valueOf(200));
+    }
+
+    @PostMapping("/subscribeSelect/{index}/{autoPaymentOption}")
+    ResponseEntity<Void> subscribeSelect(@PathVariable String index, @AuthenticationPrincipal UserDetails userDetails, @PathVariable Boolean autoPaymentOption) {
+        boolean payResult = isPaymentSuccess();
+
+        if (!payResult) {
+            return new ResponseEntity<>(HttpStatusCode.valueOf(501));
+        }
+
+        System.out.println(index + " " + autoPaymentOption);
+        return new ResponseEntity<>(HttpStatusCode.valueOf(200));
+    }
+
+    private boolean isPaymentSuccess() {
+        return true;
     }
 }
