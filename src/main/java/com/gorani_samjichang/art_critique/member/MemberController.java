@@ -72,7 +72,7 @@ public class MemberController {
                 .nickname(nickname)
                 .isDeleted(false)
                 .serialNumber(serialNumber)
-                .role("USER")
+                .role("ROLE_USER")
                 .build();
 
         if (password == null) {

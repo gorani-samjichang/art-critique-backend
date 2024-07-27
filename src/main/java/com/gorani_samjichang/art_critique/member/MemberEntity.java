@@ -30,7 +30,7 @@ public class MemberEntity {
     private String profile;
     private String level;
     private LocalDateTime createdAt;
-    private String role; // USER, ADMIN 이정도만 생각하는중
+    private String role; // ROLE_USER, ROLE_ADMIN 이정도만 생각하는중 ROLE_을 접두사로 쓰는건 Spring Security 의 정책
     @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
     @JsonManagedReference
     private List<FeedbackEntity> feedbacks = new ArrayList<>();
