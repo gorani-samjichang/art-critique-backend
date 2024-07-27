@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.security.SecureRandom;
 
 @Component
@@ -32,4 +33,26 @@ public class CommonUtil {
         bucket.create(fileName, content, file.getContentType());
         return "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/" + fileName + "?alt=media&token=";
     }
+
+    public <T> void copyNonNullProperties(T source, T target) {
+        if (source == null || target == null) {
+            throw new IllegalArgumentException("Source and target must not be null");
+        }
+
+        Class<?> clazz = source.getClass();
+        Field[] fields = clazz.getDeclaredFields();
+
+        for (Field field : fields) {
+            try {
+                field.setAccessible(true);
+                Object value = field.get(source);
+                if (value != null) {
+                    field.set(target, value);
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }

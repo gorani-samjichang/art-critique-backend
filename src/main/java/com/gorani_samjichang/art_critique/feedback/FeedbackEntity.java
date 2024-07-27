@@ -17,6 +17,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 public class FeedbackEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,7 +39,9 @@ public class FeedbackEntity {
     private Boolean isPublic;
     private Boolean isBookmarked;
     private Long tail;
-    @OneToMany(mappedBy = "feedbackEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = false)
+    private String state; // NOT_STARTED, PENDING, COMPLETED
+    private Integer progressRate;
+    @OneToMany(mappedBy = "feedbackEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
     @JsonManagedReference
     private List<FeedbackResultEntity> feedbackResults;
 
