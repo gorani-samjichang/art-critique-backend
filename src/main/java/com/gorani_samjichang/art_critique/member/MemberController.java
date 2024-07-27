@@ -91,8 +91,7 @@ public class MemberController {
                         HttpServletResponse response) throws UserNotFoundException {
 
         try {
-            memberService.oauthXLogin(accessToken, tokenSecret, uid, response);
-            return true;
+            return memberService.oauthXLogin(accessToken, tokenSecret, uid, response);
         } catch (Exception e) {
             throw new UserNotFoundException("Cannot find X account");
         }

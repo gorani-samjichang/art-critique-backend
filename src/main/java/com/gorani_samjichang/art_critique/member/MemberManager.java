@@ -2,11 +2,13 @@ package com.gorani_samjichang.art_critique.member;
 
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class MemberManager {
-    private MemberRepository memberRepository;
+    private final MemberRepository memberRepository;
 
     public MemberEntity findValidMember(String email) {
         MemberEntity member = findMember(email);

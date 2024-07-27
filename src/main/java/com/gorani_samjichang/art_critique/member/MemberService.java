@@ -6,8 +6,6 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
-import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
-import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -68,10 +66,6 @@ public class MemberService {
 
     public String readRole(String email) {
         return memberManager.findValidMember(email).getRole();
-    }
-
-    public MemberDto CreateMember(String pw, String nickname, String level, MultipartFile profile) {
-        return null;
     }
 
     private String emailTokenValidation(HttpServletRequest request) {
