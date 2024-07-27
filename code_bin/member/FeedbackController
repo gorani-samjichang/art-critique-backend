@@ -1,0 +1,123 @@
+
+    /*
+    @PostMapping("/request")
+    String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+        if (me.getCredit() <= 0) {
+            return "noCreditError";
+        }
+        String serialNumber = UUID.randomUUID().toString();
+
+        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
+
+        String jsonData = "{ \"name\": " + "\"imageUrl\"" + "}";
+
+        try {
+            FeedbackEntity pythonResponse = webClientBuilder.build()
+                    .post()
+                    .uri(feedbackServerHost + "/request")
+                    .header("Content-Type", "application/json")
+                    .bodyValue(jsonData)
+                    .retrieve()
+                    .bodyToMono(FeedbackEntity.class)
+                    .block();
+
+            pythonResponse.setCreatedAt(LocalDateTime.now());
+            pythonResponse.setIsPublic(true);
+            pythonResponse.setIsBookmarked(false);
+            pythonResponse.setTail(null);
+            pythonResponse.setSerialNumber(serialNumber);
+            pythonResponse.setPictureUrl(imageUrl);
+            feedbackRepository.save(pythonResponse);
+
+            me.addFeedback(pythonResponse);
+            me.setCredit(me.getCredit() - 1);
+
+            memberRepository.save(me);
+
+            return pythonResponse.getSerialNumber();
+        } catch(Exception e) {
+            response.setStatus(501);
+            return null;
+        }
+    }
+     */
+
+    /*
+    @GetMapping("/public/retrieve/{serialNumber}")
+    RetrieveFeedbackDto retrieveFeedback(@PathVariable("serialNumber") String serialNumber, HttpServletResponse response) {
+        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+        if (feedbackEntity.isPresent()) {
+            RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
+                    .isBookmarked(feedbackEntity.get().getIsBookmarked())
+                    .version(feedbackEntity.get().getVersion())
+                    .createdAt(feedbackEntity.get().getCreatedAt())
+                    .pictureUrl(feedbackEntity.get().getPictureUrl())
+                    .serialNumber(feedbackEntity.get().getSerialNumber())
+                    .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
+                    .userReview(feedbackEntity.get().getUserReview())
+                    .build();
+
+            List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
+            for (FeedbackResultEntity e : feedbackEntity.get().getFeedbackResults()) {
+                FeedbackResultDto resultDto = new FeedbackResultDto();
+                resultDto.setFeedbackContent(e.getFeedbackContent());
+                resultDto.setFeedbackType(e.getFeedbackType());
+                resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
+                ResultDtoList.add(resultDto);
+            }
+            dto.setFeedbackResults(ResultDtoList);
+            return dto;
+        } else {
+            System.out.println("아예 피드백이 없음");
+            response.setStatus(402);
+            return null;
+        }
+    }
+     */
+
+
+    /*
+    @PostMapping("/remake/{serialNumber}")
+    String remake(@RequestParam("image") MultipartFile imageFile,
+                  @PathVariable String serialNumber,
+                  HttpServletRequest request,
+                  HttpServletResponse response) throws IOException {
+        System.out.println(imageFile + "  이미지에 대한 재요청");
+        Optional<FeedbackEntity> original = feedbackRepository.findBySerialNumber(serialNumber);
+        if (original.isEmpty()) {
+            response.setStatus(402);
+            return null;
+        }
+        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
+        me.removeFeedback(original.get());
+
+        String jsonData = "{ \"name\": \"default\" }";
+
+        FeedbackEntity pythonResponse = webClientBuilder.build()
+                .post()
+                .uri(feedbackServerHost + "/request")
+                .header("Content-Type", "application/json")
+                .bodyValue(jsonData)
+                .retrieve()
+                .bodyToMono(FeedbackEntity.class)
+                .block();
+
+        assert pythonResponse != null;
+        pythonResponse.setCreatedAt(LocalDateTime.now());
+        pythonResponse.setIsPublic(original.get().getIsPublic());
+        pythonResponse.setIsBookmarked(original.get().getIsBookmarked());
+        pythonResponse.setTail(original.get().getFid());
+        pythonResponse.setPictureUrl(original.get().getPictureUrl());
+
+        String sn = UUID.randomUUID().toString();
+        pythonResponse.setSerialNumber(sn);
+
+        feedbackRepository.save(pythonResponse);
+        me.addFeedback(pythonResponse);
+        memberRepository.save(me);
+
+        return "null";
+    }
+    */

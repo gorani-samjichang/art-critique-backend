@@ -41,6 +41,7 @@ public class FeedbackEntity {
     private Long tail;
     private String state; // NOT_STARTED, PENDING, COMPLETED
     private Integer progressRate;
+    private Boolean isHead;
     @OneToMany(mappedBy = "feedbackEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
     @JsonManagedReference
     private List<FeedbackResultEntity> feedbackResults;

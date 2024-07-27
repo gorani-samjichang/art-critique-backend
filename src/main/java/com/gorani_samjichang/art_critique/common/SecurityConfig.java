@@ -63,8 +63,11 @@ public class SecurityConfig {
                 .sessionManagement((session) -> session // 세션관리 필요없으니까 Stateless
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/test/**", "/member/public/**", "/feedback/public/**")
-                                .permitAll()
+                        .requestMatchers(
+                                "/test/**",
+                                "/member/public/**",
+                                "/feedback/public/**",
+                                "/plan/public/**").permitAll()
 //                        .requestMatchers("admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtFilter(jwtUtil), LoginFilter.class)
