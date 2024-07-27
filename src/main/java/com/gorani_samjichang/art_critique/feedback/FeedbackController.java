@@ -11,10 +11,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/feedback")
@@ -28,6 +31,7 @@ public class FeedbackController {
     final WebClient.Builder webClientBuilder;
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
+    final EmitterService emitterService;
 
     String [] dummyTodayGoodImage = new String [] {
             "https://picsum.photos/id/88/180/160",
@@ -54,49 +58,122 @@ public class FeedbackController {
     }
 
     @PostMapping("/request")
-    String requestFeedback(@RequestParam("image") MultipartFile imageFile, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    String requestFeedback(
+            @RequestParam("image") MultipartFile imageFile,
+            HttpServletRequest request, HttpServletResponse response) throws IOException {
 
         MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
         if (me.getCredit() <= 0) {
-            return "noCreditError";
+            return "noCredit";
         }
         String serialNumber = UUID.randomUUID().toString();
         String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
+        FeedbackEntity feedbackEntity = FeedbackEntity
+                .builder()
+                .serialNumber(serialNumber)
+                .state("NOT_STARTED")
+                .progressRate(0)
+                .isBookmarked(false)
+                .isPublic(true)
+                .pictureUrl(imageUrl)
+                .isHead(true)
+                .tail(null)
+                .build();
 
-        String jsonData = "{ \"name\": " + "\"imageUrl\"" + "}";
+        feedbackRepository.save(feedbackEntity);
+
+        me.addFeedback(feedbackEntity);
+        me.setCredit(me.getCredit() - 1);
+
+        memberRepository.save(me);
 
         try {
-            FeedbackEntity pythonResponse = webClientBuilder.build()
+            String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
+            webClientBuilder.build()
                     .post()
                     .uri(feedbackServerHost + "/request")
                     .header("Content-Type", "application/json")
                     .bodyValue(jsonData)
                     .retrieve()
                     .bodyToMono(FeedbackEntity.class)
-                    .block();
+                    .doOnNext(pythonResponse -> {
+                        if (pythonResponse != null) {
+                            commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
+                            for (FeedbackResultEntity fre : feedbackEntity.getFeedbackResults()) {
+                                fre.setFeedbackEntity(feedbackEntity);
+                            }
+                        }
 
-            pythonResponse.setCreatedAt(LocalDateTime.now());
-            pythonResponse.setIsPublic(true);
-            pythonResponse.setIsBookmarked(false);
-            pythonResponse.setTail(null);
-            pythonResponse.setSerialNumber(serialNumber);
-            pythonResponse.setPictureUrl(imageUrl);
-            feedbackRepository.save(pythonResponse);
+                        feedbackEntity.setCreatedAt(LocalDateTime.now());
+                        feedbackRepository.save(feedbackEntity);
+                    })
+                    .subscribe();
 
-            me.addFeedback(pythonResponse);
-            me.setCredit(me.getCredit() - 1);
-
-            memberRepository.save(me);
-
-            return pythonResponse.getSerialNumber();
         } catch(Exception e) {
             response.setStatus(501);
-            return null;
         }
+
+        return serialNumber;
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
-    RetrieveFeedbackDto retrieveFeedback(@PathVariable("serialNumber") String serialNumber, HttpServletResponse response) {
+    public SseEmitter retrieve(@PathVariable String serialNumber, HttpServletResponse response) {
+        SseEmitter emitter = new SseEmitter();
+
+        // threadSafe 한지 아직 알 수 없음
+        // 아마 이 원리 그대로 진행 할 것 같음
+        // 프론트가 접속이 끊겨도 내부적으로 데이터베이스에 파이썬의 입력값이 들어와야함 따라서
+        // 프론트 - 스프링 / 스프링 - 파이썬 은 완전히 별개의 연결이고 파이썬과 스프링의 연결의 결과는 데이터베이스에 반영이되야하고, 스프링과 프론트의 연결은 프론트에 반영되야함
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                for (int i = 0; i <= 50; i++) {
+                    Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+                    emitter.send(SseEmitter.event()
+                            .name("pending")
+                            .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+//                            .data("{\"rate\":" + i + "}")
+                    );
+                    TimeUnit.MILLISECONDS.sleep(1000);
+                    if (feedbackEntity.get().getState().equals("COMPLETED")) {
+                        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
+                                .isBookmarked(feedbackEntity.get().getIsBookmarked())
+                                .version(feedbackEntity.get().getVersion())
+                                .createdAt(feedbackEntity.get().getCreatedAt())
+                                .pictureUrl(feedbackEntity.get().getPictureUrl())
+                                .serialNumber(feedbackEntity.get().getSerialNumber())
+                                .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
+                                .userReview(feedbackEntity.get().getUserReview())
+                                .build();
+
+                        List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
+                        for (FeedbackResultEntity e : feedbackEntity.get().getFeedbackResults()) {
+                            FeedbackResultDto resultDto = new FeedbackResultDto();
+                            resultDto.setFeedbackContent(e.getFeedbackContent());
+                            resultDto.setFeedbackType(e.getFeedbackType());
+                            resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
+                            ResultDtoList.add(resultDto);
+                        }
+                        dto.setFeedbackResults(ResultDtoList);
+                        emitter.send(SseEmitter.event()
+                                .name("completed")
+                                .data(dto)
+                        );
+                        break;
+                    }
+                }
+                emitter.complete();
+            } catch (IOException | InterruptedException e) {
+                System.out.println("!!!");
+            }
+        });
+        return emitter;
+//        return emitterService.connection(serialNumber, response);
+    }
+
+    @GetMapping("/retrieve/{serialNumber}")
+    RetrieveFeedbackDto simpleRetrieve(
+            @PathVariable String serialNumber,
+            HttpServletResponse response) {
         Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
         if (feedbackEntity.isPresent()) {
             RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
@@ -107,6 +184,7 @@ public class FeedbackController {
                     .serialNumber(feedbackEntity.get().getSerialNumber())
                     .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
                     .userReview(feedbackEntity.get().getUserReview())
+                    .state(feedbackEntity.get().getState())
                     .build();
 
             List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
@@ -120,7 +198,6 @@ public class FeedbackController {
             dto.setFeedbackResults(ResultDtoList);
             return dto;
         } else {
-            System.out.println("아예 피드백이 없음");
             response.setStatus(402);
             return null;
         }
@@ -157,6 +234,7 @@ public class FeedbackController {
         MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
         ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
         for (FeedbackEntity f : me.getFeedbacks()) {
+            if (!f.getIsHead()) continue;
             feedbackEntities.add(PastFeedbackDto
                     .builder()
                     .isBookmarked(f.getIsBookmarked())
@@ -179,6 +257,7 @@ public class FeedbackController {
         MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
         ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
         for (FeedbackEntity f : me.getFeedbacks()) {
+            if (!f.getIsHead()) continue;
             feedbackEntities.add(PastFeedbackDto
                     .builder()
                     .isBookmarked(f.getIsBookmarked())
@@ -203,6 +282,7 @@ public class FeedbackController {
         MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
         ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
         for (FeedbackEntity f : me.getFeedbacks()) {
+            if (!f.getIsHead()) continue;
             feedbackEntities.add(PastFeedbackDto
                     .builder()
                     .isBookmarked(f.getIsBookmarked())
@@ -227,7 +307,7 @@ public class FeedbackController {
         MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
         ArrayList<PastFeedbackDto> feedbackDtoList = new ArrayList<>();
         for (FeedbackEntity f : me.getFeedbacks()) {
-            if (!f.getIsBookmarked()) continue;
+            if (!f.getIsHead()) continue;
             feedbackDtoList.add(PastFeedbackDto
                     .builder()
                     .isBookmarked(f.getIsBookmarked())
@@ -243,46 +323,69 @@ public class FeedbackController {
         return feedbackDtoList;
     }
 
-    @PostMapping("/remake/{serialNumber}")
-    String remake(@RequestParam("image") MultipartFile imageFile,
-                  @PathVariable String serialNumber,
+    @PostMapping("/re-request/{serialNumber}")
+    String reRequest(@PathVariable String serialNumber,
                   HttpServletRequest request,
-                  HttpServletResponse response) throws IOException {
-        System.out.println(imageFile + "  이미지에 대한 재요청");
-        Optional<FeedbackEntity> original = feedbackRepository.findBySerialNumber(serialNumber);
-        if (original.isEmpty()) {
-            response.setStatus(402);
+                  HttpServletResponse response) {
+
+        MemberEntity myMemberEntity = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
+        if (myMemberEntity.getCredit() <= 0) {
+            response.setStatus(401);
             return null;
         }
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        me.removeFeedback(original.get());
 
-        String jsonData = "{ \"name\": \"default\" }";
+        myMemberEntity.setCredit(myMemberEntity.getCredit() - 1);
+        memberRepository.save(myMemberEntity);
 
-        FeedbackEntity pythonResponse = webClientBuilder.build()
-                .post()
-                .uri(feedbackServerHost + "/request")
-                .header("Content-Type", "application/json")
-                .bodyValue(jsonData)
-                .retrieve()
-                .bodyToMono(FeedbackEntity.class)
-                .block();
+        Optional<FeedbackEntity> oldFeedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
 
-        assert pythonResponse != null;
-        pythonResponse.setCreatedAt(LocalDateTime.now());
-        pythonResponse.setIsPublic(original.get().getIsPublic());
-        pythonResponse.setIsBookmarked(original.get().getIsBookmarked());
-        pythonResponse.setTail(original.get().getFid());
-        pythonResponse.setPictureUrl(original.get().getPictureUrl());
+        String newSerialNumber = UUID.randomUUID().toString();
+        System.out.println(serialNumber);
+        System.out.println(newSerialNumber);
+        String imageUrl = oldFeedbackEntity.get().getPictureUrl();
+        FeedbackEntity newFeedbackEntity = FeedbackEntity
+                .builder()
+                .serialNumber(newSerialNumber)
+                .state("NOT_STARTED")
+                .progressRate(0)
+                .pictureUrl(imageUrl)
+                .isPublic(oldFeedbackEntity.get().getIsPublic())
+                .isBookmarked(oldFeedbackEntity.get().getIsBookmarked())
+                .tail(oldFeedbackEntity.get().getFid())
+                .build();
+        feedbackRepository.save(newFeedbackEntity);
 
-        String sn = UUID.randomUUID().toString();
-        pythonResponse.setSerialNumber(sn);
+        try {
+            String jsonData = "{\"name\": " + "\"" + imageUrl + "\"}";
+            webClientBuilder.build()
+                    .post()
+                    .uri(feedbackServerHost + "/request")
+                    .header("Content-Type", "application/json")
+                    .bodyValue(jsonData)
+                    .retrieve()
+                    .bodyToMono(FeedbackEntity.class)
+                    .doOnNext(pythonResponse -> {
+                        if (pythonResponse != null) {
+                            commonUtil.copyNonNullProperties(pythonResponse, newFeedbackEntity);
+                            for (FeedbackResultEntity fre : newFeedbackEntity.getFeedbackResults()) {
+                                fre.setFeedbackEntity(newFeedbackEntity);
+                            }
+                        }
 
-        feedbackRepository.save(pythonResponse);
-        me.addFeedback(pythonResponse);
-        memberRepository.save(me);
+                        newFeedbackEntity.setCreatedAt(LocalDateTime.now());
+                        newFeedbackEntity.setIsHead(true);
+                        oldFeedbackEntity.get().setIsHead(false);
+                        myMemberEntity.addFeedback(newFeedbackEntity);
 
-        return "null";
+                        feedbackRepository.save(newFeedbackEntity);
+                        memberRepository.save(myMemberEntity);
+                    })
+                    .subscribe();
+        } catch(Exception e) {
+            response.setStatus(501);
+        }
+
+        return newSerialNumber;
     }
 
     @PostMapping("/turn-off-bookmark/{serialNumber}")

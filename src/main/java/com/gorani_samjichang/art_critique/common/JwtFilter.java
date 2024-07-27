@@ -1,6 +1,5 @@
 package com.gorani_samjichang.art_critique.common;
 
-import com.gorani_samjichang.art_critique.common.JwtUtil;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import jakarta.servlet.FilterChain;
@@ -15,8 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.lang.reflect.Member;
-import java.util.Arrays;
 
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
@@ -51,6 +48,8 @@ public class JwtFilter extends OncePerRequestFilter {
         CustomUserDetails customUserDetails = new CustomUserDetails(memberEntity);
         Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authToken);
+
+        // @AuthenticationPrincipal 로 바꿀 필요가 있어보임
         request.setAttribute("email", email);
 
         filterChain.doFilter(request, response);

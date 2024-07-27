@@ -7,8 +7,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/test")
@@ -26,5 +30,22 @@ public class TestController {
     @GetMapping("/hello")
     String hello() {
         return "hello";
+    }
+
+    @GetMapping("/progress")
+    public SseEmitter getProgress() {
+        SseEmitter emitter = new SseEmitter();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                for (int i = 0; i <= 10; i++) {
+                    emitter.send("Progress: " + i + "0%");
+                    TimeUnit.MILLISECONDS.sleep(10);
+                }
+                emitter.complete();
+            } catch (IOException | InterruptedException e) {
+                System.out.println("!!!");
+            }
+        });
+        return emitter;
     }
 }
