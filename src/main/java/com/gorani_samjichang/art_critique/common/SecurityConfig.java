@@ -68,7 +68,7 @@ public class SecurityConfig {
                                 "/member/public/**",
                                 "/feedback/public/**",
                                 "/plan/public/**").permitAll()
-//                        .requestMatchers("admin/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtFilter(jwtUtil), LoginFilter.class)
                 .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, "/custom-login"), UsernamePasswordAuthenticationFilter.class);

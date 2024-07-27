@@ -1,12 +1,12 @@
 package com.gorani_samjichang.art_critique.plan;
 
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
+import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
@@ -42,7 +42,7 @@ public class PlanController {
     }
 
     @PostMapping("/prepaymentSelect/{index}")
-    ResponseEntity<Void> prepaymentSelect(@PathVariable String index, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    ResponseEntity<Void> prepaymentSelect(@PathVariable Integer index, @AuthenticationPrincipal CustomUserDetails userDetails) {
         boolean payResult = isPaymentSuccess();
 
 //        System.out.println(userDetails.getUsername());
@@ -51,18 +51,22 @@ public class PlanController {
         if (!payResult) {
             return new ResponseEntity<>(HttpStatusCode.valueOf(501));
         }
+        MemberEntity myEntity = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
+        myEntity.setCredit(myEntity.getCredit() + prepaymentPlans.get(index).getAmount());
+        memberRepository.save(myEntity);
         return new ResponseEntity<>(HttpStatusCode.valueOf(200));
     }
 
     @PostMapping("/subscribeSelect/{index}/{autoPaymentOption}")
-    ResponseEntity<Void> subscribeSelect(@PathVariable String index, @AuthenticationPrincipal UserDetails userDetails, @PathVariable Boolean autoPaymentOption) {
+    ResponseEntity<Void> subscribeSelect(@PathVariable Integer index, @PathVariable Boolean autoPaymentOption, @AuthenticationPrincipal CustomUserDetails userDetails) {
         boolean payResult = isPaymentSuccess();
 
         if (!payResult) {
             return new ResponseEntity<>(HttpStatusCode.valueOf(501));
         }
-
-        System.out.println(index + " " + autoPaymentOption);
+        MemberEntity myEntity = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
+        myEntity.setCredit(myEntity.getCredit() + subscribePlans.get(index).getAmount());
+        memberRepository.save(myEntity);
         return new ResponseEntity<>(HttpStatusCode.valueOf(200));
     }
 
