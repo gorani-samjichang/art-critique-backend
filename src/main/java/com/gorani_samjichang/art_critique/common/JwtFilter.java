@@ -38,11 +38,13 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
         String email = jwtUtil.getEmail(token);
-        String role = jwtUtil.getRole(token);
+        Long uid = jwtUtil.getUid(token);
         String serialNumber = jwtUtil.getSerialNumber(token);
+        String role = jwtUtil.getRole(token);
 
         MemberEntity memberEntity = MemberEntity.builder()
                 .email(email)
+                .uid(uid)
                 .serialNumber(serialNumber)
                 .role(role)
                 .build();

@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
+import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,7 +19,11 @@ import oauth.signpost.exception.OAuthMessageSignerException;
 import org.apache.http.client.methods.HttpGet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +35,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -38,6 +44,7 @@ import java.util.UUID;
 public class MemberController {
 
     final MemberRepository memberRepository;
+    final CreditRepository creditRepository;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
     final AuthenticationManagerBuilder authenticationManagerBuilder;
     final WebClient.Builder webClientBuilder;
@@ -87,7 +94,7 @@ public class MemberController {
         }
         memberRepository.save(memberEntity);
 
-        String token = jwtUtil.createJwt(email, serialNumber, memberEntity.getRole(), 7*24*60*60*1000L);
+        String token = jwtUtil.createJwt(email, memberEntity.getUid(), serialNumber, memberEntity.getRole(), 7*24*60*60*1000L);
         registerCookie("Authorization", token, -1, response);
 
         HashMap<String, String> dto = new HashMap<>();
@@ -154,9 +161,10 @@ public class MemberController {
     }
 
     @GetMapping("credit")
-    int credit(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
-        return me.getCredit();
+    ResponseEntity<Integer> credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        Optional<MemberEntity> myEntity = memberRepository.findById(userDetails.getUid());
+        return myEntity.map(memberEntity -> new ResponseEntity<>(memberEntity.getCredit(), HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(null, HttpStatusCode.valueOf(401)));
     }
 
     @GetMapping("/public/logout")
@@ -173,9 +181,11 @@ public class MemberController {
         return "[{\"value\": \"newbie\",\"display\": \"입문\",\"color\": \"rgb(245,125,125)\"},{\"value\": \"chobo\",\"display\": \"초보\",\"color\": \"rgb(214, 189, 81)\"},{\"value\": \"intermediate\",\"display\": \"중수\",\"color\": \"rgb(82, 227, 159)\"},{\"value\": \"gosu\",\"display\": \"고수\",\"color\": \"rgb(70, 104, 227)\"}]";
     }
 
-    String [] getTokenInfo(String email) {
+    JwtInfoVo getTokenInfo(String email) {
         MemberEntity me = memberRepository.findByEmailAndIsDeleted(email, false);
-        return (me == null) ? null : new String [] {me.getSerialNumber(), me.getRole()};
+        if (me == null) return null;
+        JwtInfoVo jwtInfoVo = JwtInfoVo.builder().uid(me.getUid()).serialNumber(me.getSerialNumber()).role(me.getRole()).build();
+        return jwtInfoVo;
     }
 
     @GetMapping("/public/oauth-login/google/{idToken}")
@@ -189,11 +199,11 @@ public class MemberController {
         String email = null;
         if (payload != null) {
             email = payload.getEmail();
-            String [] jwtInfo = getTokenInfo(email);
+            JwtInfoVo jwtInfo = getTokenInfo(email);
             if (jwtInfo == null) {
                 return false;
             } else {
-                String token = jwtUtil.createJwt(email, jwtInfo[0], jwtInfo[1], 7*24*60*60*1000L);
+                String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7*24*60*60*1000L);
                 registerCookie("Authorization", token, -1, response);
                 return true;
             }
@@ -218,11 +228,11 @@ public class MemberController {
                 email = email + "@twitter.com";
             }
 
-            String [] jwtInfo = getTokenInfo(email);
+            JwtInfoVo jwtInfo = getTokenInfo(email);
             if (jwtInfo == null) {
                 return false;
             } else {
-                String token = jwtUtil.createJwt(email, jwtInfo[0], jwtInfo[1], 7*24*60*60*1000L);
+                String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7*24*60*60*1000L);
                 registerCookie("Authorization", token, -1, response);
                 return true;
             }

@@ -1,12 +1,18 @@
 package com.gorani_samjichang.art_critique.feedback;
 
 import com.gorani_samjichang.art_critique.common.CommonUtil;
+import com.gorani_samjichang.art_critique.credit.CreditEntity;
+import com.gorani_samjichang.art_critique.credit.CreditRepository;
+import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +32,7 @@ public class FeedbackController {
 
     final FeedbackRepository feedbackRepository;
     final MemberRepository memberRepository;
+    final CreditRepository creditRepository;
     final CommonUtil commonUtil;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
     final WebClient.Builder webClientBuilder;
@@ -58,14 +65,17 @@ public class FeedbackController {
     }
 
     @PostMapping("/request")
-    String requestFeedback(
+    ResponseEntity<String> requestFeedback(
             @RequestParam("image") MultipartFile imageFile,
-            HttpServletRequest request, HttpServletResponse response) throws IOException {
+            @AuthenticationPrincipal CustomUserDetails userDetails, HttpServletResponse response) throws IOException {
 
-        MemberEntity me = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
-        if (me.getCredit() <= 0) {
-            return "noCredit";
+        Optional<MemberEntity> me = memberRepository.findById(userDetails.getUid());
+        CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
+        if (me.isEmpty()) return new ResponseEntity<>(null, HttpStatusCode.valueOf(401));
+        if (me.get().getCredit() <= 0 || usedCredit == null) {
+            return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
         }
+
         String serialNumber = UUID.randomUUID().toString();
         String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
         FeedbackEntity feedbackEntity = FeedbackEntity
@@ -82,10 +92,13 @@ public class FeedbackController {
 
         feedbackRepository.save(feedbackEntity);
 
-        me.addFeedback(feedbackEntity);
-        me.setCredit(me.getCredit() - 1);
+        me.get().addFeedback(feedbackEntity);
+        me.get().setCredit(me.get().getCredit() - 1);
+        usedCredit.useCredit();
 
-        memberRepository.save(me);
+        creditRepository.save(usedCredit);
+
+        memberRepository.save(me.get());
 
         try {
             String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
@@ -110,10 +123,10 @@ public class FeedbackController {
                     .subscribe();
 
         } catch(Exception e) {
-            response.setStatus(501);
+            return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
         }
 
-        return serialNumber;
+        return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
@@ -230,118 +243,48 @@ public class FeedbackController {
     }
 
     @GetMapping("/write-order")
-    List<PastFeedbackDto> writeOrder(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
-            if (!f.getIsHead()) continue;
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-
-        feedbackEntities.sort(Comparator.comparing(PastFeedbackDto::getCreatedAt)); //만들어진 순서로 오름차순
-
-        return feedbackEntities;
+    List<PastFeedbackDto> writeOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        List<FeedbackEntity> entities = feedbackRepository.findByWriteOrder(userDetail.getUid());
+        return convertFeedbackEntityToDto(entities);
     }
 
     @GetMapping("/recent-order")
-    List<PastFeedbackDto> recentOrder(HttpServletRequest request, HttpServletResponse response) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
-            if (!f.getIsHead()) continue;
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-
-        feedbackEntities.sort((o1, o2) -> {
-            return o2.getCreatedAt().compareTo(o1.getCreatedAt()); // 만들어진 순서대로 내림차순
-        });
-
-        return feedbackEntities;
+    List<PastFeedbackDto> recentOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        List<FeedbackEntity> entities = feedbackRepository.findByRecentOrder(userDetail.getUid());
+        return convertFeedbackEntityToDto(entities);
     }
 
     @GetMapping("/score-order")
-    List<PastFeedbackDto> scoreOrder(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
-            if (!f.getIsHead()) continue;
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-
-        feedbackEntities.sort((o1, o2) -> {
-            return o2.getTotalScore().compareTo(o1.getTotalScore()); // 만들어진 순서대로 내림차순
-        });
-
-        return feedbackEntities;
+    List<PastFeedbackDto> scoreOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        List<FeedbackEntity> entities = feedbackRepository.findByScoreOrder(userDetail.getUid());
+        return convertFeedbackEntityToDto(entities);
     }
 
     @GetMapping("/bookmark")
-    List<PastFeedbackDto> bookmark(HttpServletRequest request) {
-        MemberEntity me = memberRepository.findByEmail(request.getAttribute("email").toString());
-        ArrayList<PastFeedbackDto> feedbackDtoList = new ArrayList<>();
-        for (FeedbackEntity f : me.getFeedbacks()) {
-            if (!f.getIsHead()) continue;
-            feedbackDtoList.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-
-        return feedbackDtoList;
+    List<PastFeedbackDto> bookmark(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        List<FeedbackEntity> entities = feedbackRepository.findByUidAndBookmarked(userDetail.getUid());
+        return convertFeedbackEntityToDto(entities);
     }
 
     @PostMapping("/re-request/{serialNumber}")
-    String reRequest(@PathVariable String serialNumber,
-                  HttpServletRequest request,
+    ResponseEntity<String> reRequest(@PathVariable String serialNumber,
+                  @AuthenticationPrincipal CustomUserDetails userDetails,
                   HttpServletResponse response) {
 
-        MemberEntity myMemberEntity = memberRepository.findByEmail(String.valueOf(request.getAttribute("email")));
-        if (myMemberEntity.getCredit() <= 0) {
-            response.setStatus(401);
-            return null;
+        Optional<MemberEntity> myMemberEntity = memberRepository.findById(userDetails.getUid());
+        CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
+        if (myMemberEntity.isEmpty()) return new ResponseEntity<>(null, HttpStatusCode.valueOf(401));
+        if (myMemberEntity.get().getCredit() <= 0 || usedCredit == null) {
+            return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
         }
 
-        myMemberEntity.setCredit(myMemberEntity.getCredit() - 1);
-        memberRepository.save(myMemberEntity);
+        myMemberEntity.get().setCredit(myMemberEntity.get().getCredit() - 1);
+        usedCredit.useCredit();
+        creditRepository.save(usedCredit);
 
         Optional<FeedbackEntity> oldFeedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
 
         String newSerialNumber = UUID.randomUUID().toString();
-        System.out.println(serialNumber);
-        System.out.println(newSerialNumber);
         String imageUrl = oldFeedbackEntity.get().getPictureUrl();
         FeedbackEntity newFeedbackEntity = FeedbackEntity
                 .builder()
@@ -354,6 +297,8 @@ public class FeedbackController {
                 .tail(oldFeedbackEntity.get().getFid())
                 .build();
         feedbackRepository.save(newFeedbackEntity);
+        myMemberEntity.get().addFeedback(newFeedbackEntity);
+        memberRepository.save(myMemberEntity.get());
 
         try {
             String jsonData = "{\"name\": " + "\"" + imageUrl + "\"}";
@@ -371,21 +316,19 @@ public class FeedbackController {
                                 fre.setFeedbackEntity(newFeedbackEntity);
                             }
                         }
-
                         newFeedbackEntity.setCreatedAt(LocalDateTime.now());
                         newFeedbackEntity.setIsHead(true);
                         oldFeedbackEntity.get().setIsHead(false);
-                        myMemberEntity.addFeedback(newFeedbackEntity);
 
+                        feedbackRepository.save(oldFeedbackEntity.get());
                         feedbackRepository.save(newFeedbackEntity);
-                        memberRepository.save(myMemberEntity);
                     })
                     .subscribe();
         } catch(Exception e) {
-            response.setStatus(501);
+            return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
         }
 
-        return newSerialNumber;
+        return new ResponseEntity<>(newSerialNumber, HttpStatusCode.valueOf(200));
     }
 
     @PostMapping("/turn-off-bookmark/{serialNumber}")
@@ -416,5 +359,22 @@ public class FeedbackController {
         feedbackEntity.get().setIsBookmarked(true);
         feedbackRepository.save(feedbackEntity.get());
         return true;
+    }
+
+    List<PastFeedbackDto> convertFeedbackEntityToDto(List<FeedbackEntity> list) {
+        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
+        for (FeedbackEntity f : list) {
+            feedbackEntities.add(PastFeedbackDto
+                    .builder()
+                    .isBookmarked(f.getIsBookmarked())
+                    .pictureUrl(f.getPictureUrl())
+                    .createdAt(f.getCreatedAt())
+                    .version(f.getVersion())
+                    .serialNumber(f.getSerialNumber())
+                    .totalScore(f.getTotalScore())
+                    .isSelected(false)
+                    .build());
+        }
+        return feedbackEntities;
     }
 }
