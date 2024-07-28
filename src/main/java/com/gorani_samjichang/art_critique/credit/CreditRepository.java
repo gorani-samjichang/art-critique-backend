@@ -17,4 +17,13 @@ public interface CreditRepository  extends JpaRepository<CreditEntity, Long> {
 
     @Query("SELECT p FROM CreditEntity p WHERE p.expireDate > :currentTime")
     List<CreditEntity> selectExpiredCredits(@Param("currentTime") LocalDateTime currentTime);
+
+    @Query("select p from CreditEntity p where p.memberEntity.uid = :uid")
+    List<CreditEntity> findAllByUid(@Param("uid") Long uid);
+
+    @Query("select sum(p.remainAmount) from CreditEntity p where p.memberEntity.uid = :uid and p.state = 'VALID' and p.type = 'PREPAYMENT'")
+    Integer sumOfPrepaymentCredit(@Param("uid") Long uid);
+
+    @Query("select sum(p.remainAmount) from CreditEntity p where p.memberEntity.uid = :uid and p.state = 'VALID' and p.type = 'SUBSCRIBE'")
+    Integer sumOfSubscribeCredit(Long uid);
 }
