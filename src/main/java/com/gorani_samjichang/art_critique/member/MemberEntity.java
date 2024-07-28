@@ -53,6 +53,7 @@ public class MemberEntity {
     }
 
     public void addCredit(CreditEntity creditEntity) {
+        if (credits == null) credits = new ArrayList<>();
         credits.add(creditEntity);
         creditEntity.setMemberEntity(this);
     }

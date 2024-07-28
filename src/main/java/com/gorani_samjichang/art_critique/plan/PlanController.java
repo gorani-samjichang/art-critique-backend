@@ -49,7 +49,6 @@ public class PlanController {
     ResponseEntity<Void> prepaymentSelect(@PathVariable Integer index, @AuthenticationPrincipal CustomUserDetails userDetails) {
         boolean payResult = isPaymentSuccess();
 
-        System.out.println(userDetails.getUid());
 //        System.out.println(userDetails.getUsername());
 //        System.out.println(userDetails.getSerialNumber());
 //        System.out.println(userDetails.getRole());
@@ -57,7 +56,7 @@ public class PlanController {
             return new ResponseEntity<>(HttpStatusCode.valueOf(501));
         }
         MemberEntity myEntity = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
-//        myEntity.setCredit(myEntity.getCredit() + prepaymentPlans.get(index).getAmount());
+        myEntity.setCredit(myEntity.getCredit() + prepaymentPlans.get(index).getAmount());
         CreditEntity creditEntity = CreditEntity.builder()
                 .type("PREPAYMENT")
                 .memberEntity(myEntity)
@@ -82,7 +81,7 @@ public class PlanController {
             return new ResponseEntity<>(HttpStatusCode.valueOf(501));
         }
         MemberEntity myEntity = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
-//        myEntity.setCredit(myEntity.getCredit() + subscribePlans.get(index).getAmount());
+        myEntity.setCredit(myEntity.getCredit() + subscribePlans.get(index).getAmount());
         CreditEntity creditEntity = CreditEntity.builder()
                 .type("SUBSCRIBE")
                 .memberEntity(myEntity)

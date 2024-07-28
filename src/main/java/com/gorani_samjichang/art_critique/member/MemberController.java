@@ -6,7 +6,6 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
-import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +19,9 @@ import oauth.signpost.exception.OAuthMessageSignerException;
 import org.apache.http.client.methods.HttpGet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -33,6 +35,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -158,18 +161,10 @@ public class MemberController {
     }
 
     @GetMapping("credit")
-    int credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        MemberEntity myEntity = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
-//        List<CreditEntity> credits = creditRepository.findBy
-
-        int count = 0;
-        if (myEntity == null || myEntity.getCredits() == null || myEntity.getCredits().size() == 0) {
-            return count;
-        }
-        for (CreditEntity ce : myEntity.getCredits()) {
-            count += ce.getRemainAmount();
-        }
-        return count;
+    ResponseEntity<Integer> credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        Optional<MemberEntity> myEntity = memberRepository.findById(userDetails.getUid());
+        return myEntity.map(memberEntity -> new ResponseEntity<>(memberEntity.getCredit(), HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(null, HttpStatusCode.valueOf(401)));
     }
 
     @GetMapping("/public/logout")

@@ -31,4 +31,9 @@ public class CreditEntity {
     @JsonBackReference
     private MemberEntity memberEntity;
 
+    public void useCredit() {
+        this.remainAmount--;
+        this.usedAmount++;
+        if (remainAmount <= 0) this.state = "USED_UP";
+    }
 }
