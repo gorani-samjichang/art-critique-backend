@@ -1,6 +1,8 @@
 package com.gorani_samjichang.art_critique.member;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.gorani_samjichang.art_critique.credit.CreditEntity;
+import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
 import com.gorani_samjichang.art_critique.feedback.FeedbackEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -34,14 +36,37 @@ public class MemberEntity {
     @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
     @JsonManagedReference
     private List<FeedbackEntity> feedbacks = new ArrayList<>();
+    @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
+    @JsonManagedReference
+    private List<CreditEntity> credits = new ArrayList<>();
+    @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
+    @JsonManagedReference
+    private List<CreditUsedHistoryEntity> creditHistorys = new ArrayList<>();
 
     public void addFeedback(FeedbackEntity feedbackEntity) {
         feedbacks.add(feedbackEntity);
         feedbackEntity.setMemberEntity(this);
     }
-
     public void removeFeedback(FeedbackEntity feedbackEntity) {
         feedbacks.remove(feedbackEntity);
         feedbackEntity.setMemberEntity(null);
+    }
+
+    public void addCredit(CreditEntity creditEntity) {
+        credits.add(creditEntity);
+        creditEntity.setMemberEntity(this);
+    }
+    public void removeCredit(CreditEntity creditEntity) {
+        credits.remove(creditEntity);
+        creditEntity.setMemberEntity(null);
+    }
+
+    public void addCreditHistory(CreditUsedHistoryEntity creditUsedHistoryEntity) {
+        creditHistorys.add(creditUsedHistoryEntity);
+        creditUsedHistoryEntity.setMemberEntity(this);
+    }
+    public void removeCreditHistory(CreditUsedHistoryEntity creditUsedHistoryEntity) {
+        creditHistorys.remove(creditUsedHistoryEntity);
+        creditUsedHistoryEntity.setMemberEntity(null);
     }
 }

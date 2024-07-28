@@ -20,7 +20,9 @@ public class JwtUtil {
     public String getEmail(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("email", String.class);
     }
-
+    public Long getUid(String token) {
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("uid", Long.class);
+    }
     public String getRole(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("role", String.class);
     }
@@ -32,9 +34,10 @@ public class JwtUtil {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
     }
 
-    public String createJwt(String email, String serialNumber, String role, Long expireMs) {
+    public String createJwt(String email, Long uid, String serialNumber, String role, Long expireMs) {
         return Jwts.builder()
                 .claim("email", email)
+                .claim("uid", uid)
                 .claim("serialNumber", serialNumber)
                 .claim("role", role)
                 .issuedAt(new Date(System.currentTimeMillis()))

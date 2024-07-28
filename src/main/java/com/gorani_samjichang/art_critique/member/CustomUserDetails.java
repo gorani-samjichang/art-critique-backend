@@ -40,4 +40,7 @@ public class CustomUserDetails implements UserDetails {
     public String getSerialNumber() {
         return memberEntity.getSerialNumber();
     }
+    public Long getUid() {
+        return memberEntity.getUid();
+    }
 }

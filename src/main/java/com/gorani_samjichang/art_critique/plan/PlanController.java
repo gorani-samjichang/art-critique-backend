@@ -1,5 +1,7 @@
 package com.gorani_samjichang.art_critique.plan;
 
+import com.gorani_samjichang.art_critique.credit.CreditEntity;
+import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
@@ -10,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlanController {
     final MemberRepository memberRepository;
+    final CreditRepository creditRepository;
     List<PlanVo> prepaymentPlans = new ArrayList<>();
     List<PlanVo> subscribePlans = new ArrayList<>();
     @PostConstruct
@@ -45,6 +49,7 @@ public class PlanController {
     ResponseEntity<Void> prepaymentSelect(@PathVariable Integer index, @AuthenticationPrincipal CustomUserDetails userDetails) {
         boolean payResult = isPaymentSuccess();
 
+        System.out.println(userDetails.getUid());
 //        System.out.println(userDetails.getUsername());
 //        System.out.println(userDetails.getSerialNumber());
 //        System.out.println(userDetails.getRole());
@@ -52,7 +57,19 @@ public class PlanController {
             return new ResponseEntity<>(HttpStatusCode.valueOf(501));
         }
         MemberEntity myEntity = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
-        myEntity.setCredit(myEntity.getCredit() + prepaymentPlans.get(index).getAmount());
+//        myEntity.setCredit(myEntity.getCredit() + prepaymentPlans.get(index).getAmount());
+        CreditEntity creditEntity = CreditEntity.builder()
+                .type("PREPAYMENT")
+                .memberEntity(myEntity)
+                .state("VALID")
+                .purchaseDate(LocalDateTime.now())
+                .expireDate(LocalDateTime.now().plusYears(2))
+                .usedAmount(0)
+                .purchaseAmount(prepaymentPlans.get(index).getAmount())
+                .remainAmount(prepaymentPlans.get(index).getAmount())
+                .build();
+        creditRepository.save(creditEntity);
+        myEntity.addCredit(creditEntity);
         memberRepository.save(myEntity);
         return new ResponseEntity<>(HttpStatusCode.valueOf(200));
     }
@@ -65,7 +82,19 @@ public class PlanController {
             return new ResponseEntity<>(HttpStatusCode.valueOf(501));
         }
         MemberEntity myEntity = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
-        myEntity.setCredit(myEntity.getCredit() + subscribePlans.get(index).getAmount());
+//        myEntity.setCredit(myEntity.getCredit() + subscribePlans.get(index).getAmount());
+        CreditEntity creditEntity = CreditEntity.builder()
+                .type("SUBSCRIBE")
+                .memberEntity(myEntity)
+                .state("VALID")
+                .purchaseDate(LocalDateTime.now())
+                .expireDate(LocalDateTime.now().plusMonths(1))
+                .usedAmount(0)
+                .purchaseAmount(prepaymentPlans.get(index).getAmount())
+                .remainAmount(prepaymentPlans.get(index).getAmount())
+                .build();
+        creditRepository.save(creditEntity);
+        myEntity.addCredit(creditEntity);
         memberRepository.save(myEntity);
         return new ResponseEntity<>(HttpStatusCode.valueOf(200));
     }
