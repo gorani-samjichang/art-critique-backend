@@ -3,6 +3,8 @@ package com.gorani_samjichang.art_critique.feedback;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
+import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
+import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryRepository;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
@@ -33,6 +35,7 @@ public class FeedbackController {
     final FeedbackRepository feedbackRepository;
     final MemberRepository memberRepository;
     final CreditRepository creditRepository;
+    final CreditUsedHistoryRepository creditUsedHistoryRepository;
     final CommonUtil commonUtil;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
     final WebClient.Builder webClientBuilder;
@@ -117,7 +120,14 @@ public class FeedbackController {
                             }
                         }
 
-                        feedbackEntity.setCreatedAt(LocalDateTime.now());
+                        LocalDateTime NOW = LocalDateTime.now();
+                        feedbackEntity.setCreatedAt(NOW);
+                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
+                                .type(usedCredit.getType())
+                                .usedDate(NOW)
+                                .build();
+                        me.get().addCreditHistory(historyEntity);
+                        creditUsedHistoryRepository.save(historyEntity);
                         feedbackRepository.save(feedbackEntity);
                     })
                     .subscribe();
