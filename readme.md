@@ -10,6 +10,7 @@ https://drive.google.com/open?id=1TiF4Q48JLtH2OpWXpe8wdO1B7yVQlX5H&usp=drive_fs
 ```
 spring.application.name: art_critique
 server:
+  port: 9200
   servlet:
     context-path: /api
 
