@@ -9,4 +9,7 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
     MemberEntity findByEmail(String email);
 
+    MemberEntity findByEmailAndIsDeleted(String email, boolean b);
+
+    MemberEntity findBySerialNumber(String serialNumber);
 }

@@ -42,6 +42,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
         CustomUserDetails customUserDetails = (CustomUserDetails) authResult.getPrincipal();
         String email = customUserDetails.getUsername();
+        Long uid = customUserDetails.getUid();
+        String sn = customUserDetails.getSerialNumber();
 
         Collection<? extends GrantedAuthority> authorities = authResult.getAuthorities();
         Iterator<? extends GrantedAuthority> iterator = authorities.iterator();
@@ -49,7 +51,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         String role = auth.getAuthority();
 
-        String token = jwtUtil.createJwt(email, role, 7*24*60*60*1000L);
+        String token = jwtUtil.createJwt(email, uid, sn, role, 7*24*60*60*1000L);
         String encodedValue = URLEncoder.encode( token, "UTF-8" );
         Cookie cookie = new Cookie( "Authorization", encodedValue);
         cookie.setMaxAge(-1);
