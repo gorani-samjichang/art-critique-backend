@@ -1,6 +1,5 @@
 package com.gorani_samjichang.art_critique.common;
 
-import com.gorani_samjichang.art_critique.common.JwtUtil;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import jakarta.servlet.FilterChain;
@@ -15,8 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.lang.reflect.Member;
-import java.util.Arrays;
 
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
@@ -41,16 +38,22 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
         String email = jwtUtil.getEmail(token);
+        Long uid = jwtUtil.getUid(token);
+        String serialNumber = jwtUtil.getSerialNumber(token);
         String role = jwtUtil.getRole(token);
+
         MemberEntity memberEntity = MemberEntity.builder()
                 .email(email)
-                .password("temp")
+                .uid(uid)
+                .serialNumber(serialNumber)
                 .role(role)
                 .build();
 
         CustomUserDetails customUserDetails = new CustomUserDetails(memberEntity);
         Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authToken);
+
+        // @AuthenticationPrincipal 로 바꿀 필요가 있어보임
         request.setAttribute("email", email);
 
         filterChain.doFilter(request, response);

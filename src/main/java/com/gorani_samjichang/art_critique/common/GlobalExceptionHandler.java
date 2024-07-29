@@ -3,14 +3,11 @@ package com.gorani_samjichang.art_critique.common;
 import com.gorani_samjichang.art_critique.common.exceptions.ServiceNotAvailableException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.client.HttpClientErrorException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -38,4 +35,6 @@ public class GlobalExceptionHandler {
     public String handleServiceNotWorking(final ServiceNotAvailableException e) {
         return e.getMessage();
     }
+
+    // Todo: XUserNotFoundExceiptionHandler
 }

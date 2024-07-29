@@ -21,4 +21,5 @@ public class RetrieveFeedbackDto {
     private String userReviewDetail;
     private Boolean isBookmarked;
     private List<FeedbackResultDto> feedbackResults;
+    private String state;
 }

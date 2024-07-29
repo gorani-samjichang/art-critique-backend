@@ -6,6 +6,8 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
+import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,7 +42,7 @@ public class MemberService {
     final AuthenticationManagerBuilder authenticationManagerBuilder;
     final WebClient.Builder webClientBuilder;
     final CommonUtil commonUtil;
-    private final MemberManager memberManager;
+    private final MemberRepository memberRepository;
 
     @Value("${token.verify.prefix}")
     String prefix;
@@ -50,23 +52,17 @@ public class MemberService {
     String twitterSecret;
 
     public boolean emailCheck(String email) {
-        return memberManager.existsByEmail(email);
+        return memberRepository.existsByEmail(email);
     }
 
     public boolean nicknameCheck(String nickname) {
-        return memberManager.existsByNickname(nickname);
+        return memberRepository.existsByNickname(nickname);
     }
-
-    public MemberDto readMember(String email) {
-        return memberEntityToDto(memberManager.findValidMember(email));
-    }
-
-    public int readCredit(String email) {
-        return memberManager.findValidMember(email).getCredit();
-    }
-
-    public String readRole(String email) {
-        return memberManager.findValidMember(email).getRole();
+    JwtInfoVo getTokenInfo(String email) {
+        MemberEntity me = memberRepository.findByEmailAndIsDeleted(email, false);
+        if (me == null) return null;
+        JwtInfoVo jwtInfoVo = JwtInfoVo.builder().uid(me.getUid()).serialNumber(me.getSerialNumber()).role(me.getRole()).build();
+        return jwtInfoVo;
     }
 
     private String emailTokenValidation(HttpServletRequest request) {
@@ -106,6 +102,10 @@ public class MemberService {
     }
 
 
+    public Integer readCredit(CustomUserDetails userDetails){
+        return userDetails.memberEntity.getCredit();
+    }
+
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
         String encodedValue = URLEncoder.encode(token, "UTF-8");
         Cookie cookie = new Cookie(key, encodedValue);
@@ -140,6 +140,7 @@ public class MemberService {
                 .block();
     }
 
+
     public MemberDto memberJoin(
             String password,
             String nickname,
@@ -149,17 +150,17 @@ public class MemberService {
             HttpServletResponse response) throws IOException {
 
         String email = emailTokenValidation(request);
+        String serialNumber = UUID.randomUUID().toString();
         MemberEntity memberEntity = MemberEntity.builder()
                 .email(email)
                 .createdAt(LocalDateTime.now())
                 .credit(1)
                 .nickname(nickname)
                 .isDeleted(false)
-                .role("USER")
+                .serialNumber(serialNumber)
+                .role("ROLE_USER")
                 .build();
 
-        String serialNumber = UUID.randomUUID().toString();
-        memberEntity.setSerialNumber(serialNumber);
         if (password == null) {
             memberEntity.setPassword(bCryptPasswordEncoder.encode(commonUtil.generateSecureRandomString(30)));
         } else {
@@ -170,22 +171,21 @@ public class MemberService {
             String profile_url = commonUtil.uploadToStorage(profile, serialNumber);
             memberEntity.setProfile(profile_url);
         }
-        memberManager.save(memberEntity);
+        memberRepository.save(memberEntity);
 
-        String token = jwtUtil.createJwt(email, memberEntity.getRole(), 7 * 24 * 60 * 60 * 1000L);
+        String token = jwtUtil.createJwt(email, memberEntity.getUid(), serialNumber, memberEntity.getRole(), 7*24*60*60*1000L);
         registerCookie("Authorization", token, -1, response);
 
         return memberEntityToDto(memberEntity);
     }
 
     public MemberDto memberEdit(
+            CustomUserDetails userDetails,
             String nickname,
             String level,
-            MultipartFile profile,
-            HttpServletRequest request
+            MultipartFile profile
     ) throws IOException {
-        String email = request.getAttribute("email").toString();
-        MemberEntity memberEntity = memberManager.findValidMember(email);
+        MemberEntity memberEntity = userDetails.memberEntity;
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {
@@ -194,33 +194,31 @@ public class MemberService {
         } else {
             memberEntity.setProfile(null);
         }
-        memberManager.save(memberEntity);
+        memberRepository.save(memberEntity);
 
         return memberEntityToDto(memberEntity);
     }
 
     public boolean oauthGoogleLogin(String idToken, HttpServletResponse response) throws UnsupportedEncodingException {
-        GoogleIdToken.Payload payload = webClientBuilder.build()
+        GoogleIdToken.Payload payload =  webClientBuilder.build()
                 .get()
                 .uri("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=" + idToken)
                 .retrieve()
                 .bodyToMono(GoogleIdToken.Payload.class)
                 .block();
         String email = null;
-        if (payload != null) {
-            email = payload.getEmail();
-            String role = readRole(email);
-            if (role == null) {
-                return false;
-            } else {
-                String token = jwtUtil.createJwt(email, role, 7 * 24 * 60 * 60 * 1000L);
-                registerCookie("Authorization", token, -1, response);
-                return true;
-            }
-        } else {
-            response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+        if (payload==null){
+            throw new UserNotFoundException("Google response payload is null");
         }
-        return false;
+        email = payload.getEmail();
+        JwtInfoVo jwtInfo = getTokenInfo(email);
+        if (jwtInfo == null) {
+            return false;
+        } else {
+            String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7*24*60*60*1000L);
+            registerCookie("Authorization", token, -1, response);
+            return true;
+        }
     }
 
     public boolean oauthXLogin(String accessToken, String tokenSecret, String uid, HttpServletResponse response) throws Exception {
@@ -232,19 +230,19 @@ public class MemberService {
             email = email + "@twitter.com";
         }
 
-        String role = readRole(email);
-        if (role == null) {
-            return false;
-        } else {
-            String token = jwtUtil.createJwt(email, role, 7 * 24 * 60 * 60 * 1000L);
-            registerCookie("Authorization", token, -1, response);
-            return true;
+        JwtInfoVo jwtInfo = getTokenInfo(email);
+        if (jwtInfo == null) {
+            throw new XUserNotFoundException("JwtInfo is null");
         }
+        String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7*24*60*60*1000L);
+        registerCookie("Authorization", token, -1, response);
+        return true;
+
     }
 
     public void tempToken(String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
         if (email.startsWith(prefix)) {
-            String[] split = email.split("@");
+            String [] split = email.split("@");
             if (split[1].equals("google")) {
                 GoogleIdToken.Payload payload = webClientBuilder.build()
                         .get()
@@ -267,7 +265,7 @@ public class MemberService {
                 email = firebaseEmail;
             }
         }
-        String token = jwtUtil.createEmailJwt(email, 60 * 60 * 1000L);
+        String token = jwtUtil.createEmailJwt(email, 60*60*1000L);
         registerCookie("token", token, -1, response);
     }
 }

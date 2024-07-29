@@ -1,13 +1,17 @@
 package com.gorani_samjichang.art_critique.member;
 
 import com.google.firebase.auth.FirebaseAuthException;
-import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
+import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
+import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,7 +22,9 @@ import java.io.UnsupportedEncodingException;
 @RequestMapping("/member")
 @RequiredArgsConstructor
 public class MemberController {
+    final CreditRepository creditRepository;
     final MemberService memberService;
+    final MemberRepository memberRepository;
 
     @GetMapping("is-logined")
     boolean isLogined() {
@@ -38,12 +44,12 @@ public class MemberController {
 
     @PostMapping("/edit")
     MemberDto memberEdit(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(value = "nickname") String nickname,
             @RequestParam(value = "level", required = false) String level,
-            @RequestParam(value = "profile", required = false) MultipartFile profile,
-            HttpServletRequest request
+            @RequestParam(value = "profile", required = false) MultipartFile profile
     ) throws IOException {
-        return memberService.memberEdit(nickname, level, profile, request);
+        return memberService.memberEdit(userDetails, nickname, level, profile);
     }
 
     @GetMapping("/public/emailCheck/{email}")
@@ -57,17 +63,17 @@ public class MemberController {
     }
 
     @GetMapping("/info")
-    MemberDto info(HttpServletRequest request) {
-        String email = String.valueOf(request.getAttribute("email"));
-        return memberService.readMember(email);
+    MemberDto info(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return memberService.memberEntityToDto(userDetails.memberEntity);
     }
 
     @GetMapping("credit")
-    int credit(HttpServletRequest request) {
-        String email = String.valueOf(request.getAttribute("email"));
-        return memberService.readCredit(email);
+//    ResponseEntity<Integer> credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
+//        return new ResponseEntity<>(memberService.readCredit(userDetails), HttpStatus.OK);
+//    }
+   Integer credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return memberService.readCredit(userDetails);
     }
-
     @GetMapping("/public/logout")
     void logout(HttpServletResponse response) {
         memberService.logout(response);
@@ -78,7 +84,6 @@ public class MemberController {
         return "[{\"value\": \"newbie\",\"display\": \"입문\",\"color\": \"rgb(245,125,125)\"},{\"value\": \"chobo\",\"display\": \"초보\",\"color\": \"rgb(214, 189, 81)\"},{\"value\": \"intermediate\",\"display\": \"중수\",\"color\": \"rgb(82, 227, 159)\"},{\"value\": \"gosu\",\"display\": \"고수\",\"color\": \"rgb(70, 104, 227)\"}]";
     }
 
-
     @GetMapping("/public/oauth-login/google/{idToken}")
     boolean oauthGoogleLogin(@PathVariable String idToken, HttpServletResponse response) throws UnsupportedEncodingException {
         return memberService.oauthGoogleLogin(idToken, response);
@@ -88,12 +93,11 @@ public class MemberController {
     boolean oauthXLogin(@PathVariable("accessToken") String accessToken,
                         @PathVariable("tokenSecret") String tokenSecret,
                         @PathVariable String uid,
-                        HttpServletResponse response) throws UserNotFoundException {
-
+                        HttpServletResponse response) {
         try {
             return memberService.oauthXLogin(accessToken, tokenSecret, uid, response);
         } catch (Exception e) {
-            throw new UserNotFoundException("Cannot find X account");
+            throw new XUserNotFoundException("User Not Found");
         }
     }
 
