@@ -14,7 +14,7 @@ server:
     context-path: /api
 
 front.server.host: http://localhost:9100 #7-26 추가됨
-feedback.server.host: http://localhost:8000/api/feedback # 7-18추가됨
+feedback.server.host: http://localhost:9300/api/feedback # 7-18추가됨
 firebaseSdkPath: keystore/art-cri**********************b9.json # (1에서 받은 파일명)
 firebaseBucket: art-cri*****.appspot.com #(저희 프로젝트 명으로 수정하세요)
 jwt.secret: d0a********************************************************439
