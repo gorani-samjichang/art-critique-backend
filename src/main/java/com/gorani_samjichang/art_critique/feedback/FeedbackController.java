@@ -242,7 +242,14 @@ public class FeedbackController {
                                 fre.setFeedbackEntity(newFeedbackEntity);
                             }
                         }
-                        newFeedbackEntity.setCreatedAt(LocalDateTime.now());
+                        LocalDateTime NOW = LocalDateTime.now();
+                        newFeedbackEntity.setCreatedAt(NOW);
+                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
+                                .type(usedCredit.getType())
+                                .usedDate(NOW)
+                                .feedbackEntity(newFeedbackEntity)
+                                .build();
+                        myMemberEntity.get().addCreditHistory(historyEntity);
                         newFeedbackEntity.setIsHead(true);
                         oldFeedbackEntity.get().setIsHead(false);
 

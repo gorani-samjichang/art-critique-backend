@@ -71,6 +71,7 @@ public class MemberController {
 //    }
    Integer credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return memberService.readCredit(userDetails);
+
     }
     @GetMapping("/public/logout")
     void logout(HttpServletResponse response) {
