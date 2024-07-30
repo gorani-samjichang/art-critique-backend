@@ -43,4 +43,5 @@ public class CustomUserDetails implements UserDetails {
     public Long getUid() {
         return memberEntity.getUid();
     }
+    public MemberEntity getMemberEntity() { return memberEntity; }
 }

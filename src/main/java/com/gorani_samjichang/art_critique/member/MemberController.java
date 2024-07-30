@@ -162,9 +162,8 @@ public class MemberController {
 
     @GetMapping("credit")
     ResponseEntity<Integer> credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        Optional<MemberEntity> myEntity = memberRepository.findById(userDetails.getUid());
-        return myEntity.map(memberEntity -> new ResponseEntity<>(memberEntity.getCredit(), HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(null, HttpStatusCode.valueOf(401)));
+        Integer credit = memberRepository.getCreditByUid(userDetails.getUid());
+        return new ResponseEntity<>(credit, HttpStatusCode.valueOf(200));
     }
 
     @GetMapping("/public/logout")
