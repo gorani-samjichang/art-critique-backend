@@ -17,4 +17,5 @@ public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> 
     Slice<FeedbackEntity> findByMemberEntityUidOrderByTotalScoreDesc(Long uid, Pageable page);
     @Query("SELECT p FROM FeedbackEntity p WHERE p.isHead = true and p.memberEntity.uid = :uid and p.isBookmarked = true order by p.createdAt desc")
     List<FeedbackEntity> findByUidAndBookmarked(@Param("uid") Long uid);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsBookmarkedOrderByCreatedAtDesc(Long uid, Boolean isBookmarked, Pageable page);
 }

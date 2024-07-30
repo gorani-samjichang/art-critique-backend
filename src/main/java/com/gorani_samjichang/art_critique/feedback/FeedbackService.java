@@ -120,6 +120,7 @@ public class FeedbackService {
                         CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
                                 .type(usedCredit.getType())
                                 .usedDate(NOW)
+                                .feedbackEntity(feedbackEntity)
                                 .build();
                         me.addCreditHistory(historyEntity);
                         creditUsedHistoryRepository.save(historyEntity);
@@ -168,6 +169,12 @@ public class FeedbackService {
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
         Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidOrderByTotalScoreDesc(uid, pageable);
+        return convertFeedbackEntityToDto(feedbackEntities);
+    }
+
+    public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page){
+        Pageable pageable = PageRequest.of(page, PAGESIZE);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedOrderByCreatedAtDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 

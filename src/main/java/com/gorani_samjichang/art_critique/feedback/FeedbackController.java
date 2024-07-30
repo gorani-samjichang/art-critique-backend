@@ -185,11 +185,15 @@ public class FeedbackController {
     List<PastFeedbackDto> scoreOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
         return feedbackService.getFeedbackTotalScoreOrder(userDetail.getUid(), 0);
     }
+    // todo: 0에 대한 처리가 끝나면 지울것.
+    @GetMapping("/bookmark/{page}")
+    List<PastFeedbackDto> bookmarkZero(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackBookmark(userDetail.getUid(), page);
+    }
 
     @GetMapping("/bookmark")
     List<PastFeedbackDto> bookmark(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByUidAndBookmarked(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+        return feedbackService.getFeedbackBookmark(userDetail.getUid(), 0);
     }
 
     @PostMapping("/re-request/{serialNumber}")
