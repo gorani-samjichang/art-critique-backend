@@ -17,6 +17,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         if (memberEntity != null) {
             return new CustomUserDetails(memberEntity);
         }
-        return null;
+        throw new UsernameNotFoundException("Name Not Found");
     }
 }

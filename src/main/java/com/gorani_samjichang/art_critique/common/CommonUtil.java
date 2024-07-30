@@ -18,6 +18,7 @@ public class CommonUtil {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     @Value("${firebaseBucket}")
     String bucketName;
+
     public String generateSecureRandomString(int length) {
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {

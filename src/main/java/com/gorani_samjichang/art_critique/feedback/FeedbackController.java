@@ -3,12 +3,10 @@ package com.gorani_samjichang.art_critique.feedback;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
-import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryRepository;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 @RequestMapping("/feedback")
 @RequiredArgsConstructor
 public class FeedbackController {
-
+    final FeedbackService feedbackService;
     final FeedbackRepository feedbackRepository;
     final MemberRepository memberRepository;
     final CreditRepository creditRepository;
@@ -44,7 +42,6 @@ public class FeedbackController {
     final WebClient.Builder webClientBuilder;
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
-    final FeedbackService feedbackService;
     final EmitterService emitterService;
 
 
@@ -56,73 +53,9 @@ public class FeedbackController {
     @PostMapping("/request")
     ResponseEntity<String> requestFeedback(
             @RequestParam("image") MultipartFile imageFile,
-            @AuthenticationPrincipal CustomUserDetails userDetails, HttpServletResponse response) throws IOException {
+            @AuthenticationPrincipal CustomUserDetails userDetails) throws IOException {
 
-        Optional<MemberEntity> me = memberRepository.findById(userDetails.getUid());
-        CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
-        if (me.isEmpty()) return new ResponseEntity<>(null, HttpStatusCode.valueOf(401));
-        if (me.get().getCredit() <= 0 || usedCredit == null) {
-            return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
-        }
-
-        String serialNumber = UUID.randomUUID().toString();
-        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
-        FeedbackEntity feedbackEntity = FeedbackEntity
-                .builder()
-                .serialNumber(serialNumber)
-                .state("NOT_STARTED")
-                .progressRate(0)
-                .isBookmarked(false)
-                .isPublic(true)
-                .pictureUrl(imageUrl)
-                .isHead(true)
-                .tail(null)
-                .build();
-
-        feedbackRepository.save(feedbackEntity);
-
-        me.get().addFeedback(feedbackEntity);
-        me.get().setCredit(me.get().getCredit() - 1);
-        usedCredit.useCredit();
-
-        creditRepository.save(usedCredit);
-
-        memberRepository.save(me.get());
-
-        try {
-            String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
-            webClientBuilder.build()
-                    .post()
-                    .uri(feedbackServerHost + "/request")
-                    .header("Content-Type", "application/json")
-                    .bodyValue(jsonData)
-                    .retrieve()
-                    .bodyToMono(FeedbackEntity.class)
-                    .doOnNext(pythonResponse -> {
-                        if (pythonResponse != null) {
-                            commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
-                            for (FeedbackResultEntity fre : feedbackEntity.getFeedbackResults()) {
-                                fre.setFeedbackEntity(feedbackEntity);
-                            }
-                        }
-
-                        LocalDateTime NOW = LocalDateTime.now();
-                        feedbackEntity.setCreatedAt(NOW);
-                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
-                                .type(usedCredit.getType())
-                                .usedDate(NOW)
-                                .build();
-                        me.get().addCreditHistory(historyEntity);
-                        creditUsedHistoryRepository.save(historyEntity);
-                        feedbackRepository.save(feedbackEntity);
-                    })
-                    .subscribe();
-
-        } catch(Exception e) {
-            return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
-        }
-
-        return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
+        return new ResponseEntity<>(feedbackService.requestFeedback(imageFile, userDetails), HttpStatusCode.valueOf(200));
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
@@ -138,8 +71,8 @@ public class FeedbackController {
                 for (int i = 0; i <= 50; i++) {
                     Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
                     emitter.send(SseEmitter.event()
-                            .name("pending")
-                            .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                                    .name("pending")
+                                    .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
 //                            .data("{\"rate\":" + i + "}")
                     );
                     TimeUnit.MILLISECONDS.sleep(1000);
@@ -216,45 +149,41 @@ public class FeedbackController {
     boolean feedbackReview(@PathVariable String serialNumber,
                            @RequestParam boolean isLike,
                            @RequestParam String review,
-                           HttpServletRequest request,
-                           HttpServletResponse response) {
-        if (review.length() < 9) {
-            response.setStatus(401);
-            return false;
-        }
-        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-        if (feedbackEntity.isEmpty()) {
-            response.setStatus(401);
-        } else {
-            if (!feedbackEntity.get().getMemberEntity().getEmail().equals(request.getAttribute("email"))) {
-                response.setStatus(401);
-                return false;
-            }
-            feedbackEntity.get().setUserReview(isLike);
-            feedbackEntity.get().setUserReviewDetail(review);
-            feedbackRepository.save(feedbackEntity.get());
-            return true;
-        }
-        return false;
+                           @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return feedbackService.feedbackReview(serialNumber, isLike, review, userDetails);
     }
 
+    @GetMapping("/write-order/{page}")
+    List<PastFeedbackDto> writeOrder(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackCreatedAtOrder(userDetail.getUid(), page);
+    }
+
+    @GetMapping("/recent-order/{page}")
+    List<PastFeedbackDto> recentOrder(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackRecentOrder(userDetail.getUid(), page);
+    }
+
+    @GetMapping("/score-order/{page}")
+    List<PastFeedbackDto> scoreOrder(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackTotalScoreOrder(userDetail.getUid(), page);
+    }
+
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/write-order")
-
-    List<PastFeedbackDto> writeOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByWriteOrder(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+    List<PastFeedbackDto> writeOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        return feedbackService.getFeedbackCreatedAtOrder(userDetail.getUid(), 0);
     }
 
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/recent-order")
-    List<PastFeedbackDto> recentOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByRecentOrder(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+    List<PastFeedbackDto> recentOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        return feedbackService.getFeedbackRecentOrder(userDetail.getUid(), 0);
     }
 
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/score-order")
-    List<PastFeedbackDto> scoreOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByScoreOrder(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+    List<PastFeedbackDto> scoreOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        return feedbackService.getFeedbackTotalScoreOrder(userDetail.getUid(), 0);
     }
 
     @GetMapping("/bookmark")
@@ -265,8 +194,8 @@ public class FeedbackController {
 
     @PostMapping("/re-request/{serialNumber}")
     ResponseEntity<String> reRequest(@PathVariable String serialNumber,
-                  @AuthenticationPrincipal CustomUserDetails userDetails,
-                  HttpServletResponse response) {
+                                     @AuthenticationPrincipal CustomUserDetails userDetails,
+                                     HttpServletResponse response) {
 
         Optional<MemberEntity> myMemberEntity = memberRepository.findById(userDetails.getUid());
         CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
@@ -321,7 +250,7 @@ public class FeedbackController {
                         feedbackRepository.save(newFeedbackEntity);
                     })
                     .subscribe();
-        } catch(Exception e) {
+        } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
         }
 
