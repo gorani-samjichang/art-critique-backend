@@ -13,6 +13,8 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
     Optional<MemberEntity> findByEmail(String email);
 
+    Optional<MemberEntity> findByUid(long uid);
+
     MemberEntity findByEmailAndIsDeleted(String email, boolean b);
 
     MemberEntity findBySerialNumber(String serialNumber);
