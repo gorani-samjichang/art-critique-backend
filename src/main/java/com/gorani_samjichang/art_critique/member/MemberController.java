@@ -1,8 +1,10 @@
 package com.gorani_samjichang.art_critique.member;
 
 import com.google.firebase.auth.FirebaseAuthException;
+import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
+import com.gorani_samjichang.art_critique.feedback.FeedbackService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class MemberController {
     final CreditRepository creditRepository;
     final MemberService memberService;
     final MemberRepository memberRepository;
+    private final FeedbackService feedbackService;
 
     @GetMapping("is-logined")
     boolean isLogined() {
@@ -104,6 +107,12 @@ public class MemberController {
     @GetMapping("/public/temp-token/{email}")
     void tempToken(@PathVariable String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
         memberService.tempToken(email, response);
+    }
+
+    @PostMapping("/info/send-email")
+    public String sendMail(@AuthenticationPrincipal CustomUserDetails userDetails) throws MessagingException {
+        memberService.sendEmail(userDetails.getMemberEntity().getEmail());
+        return "인증코드 발송 완료";
     }
 
 

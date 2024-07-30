@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
+import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
 import jakarta.servlet.http.Cookie;
@@ -44,6 +45,8 @@ public class MemberService {
     final CommonUtil commonUtil;
     private final MemberRepository memberRepository;
 
+    @Value("${google.smtp.pw}")
+    String googleMailKey;
     @Value("${token.verify.prefix}")
     String prefix;
     @Value("${twitter.consumer.key}")
@@ -268,5 +271,13 @@ public class MemberService {
         }
         String token = jwtUtil.createEmailJwt(email, 60*60*1000L);
         registerCookie("token", token, -1, response);
+    }
+
+    public void sendEmail(String userEmail) throws MessagingException {
+        try{
+
+        }catch (Exception e){
+            throw new MessagingException("이메일이 유효하지 않거나 메일 서비스가 이용 불가능합니다.")
+        }
     }
 }
