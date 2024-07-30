@@ -125,6 +125,7 @@ public class FeedbackController {
                         CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
                                 .type(usedCredit.getType())
                                 .usedDate(NOW)
+                                .feedbackEntity(feedbackEntity)
                                 .build();
                         me.get().addCreditHistory(historyEntity);
                         creditUsedHistoryRepository.save(historyEntity);
@@ -326,7 +327,14 @@ public class FeedbackController {
                                 fre.setFeedbackEntity(newFeedbackEntity);
                             }
                         }
-                        newFeedbackEntity.setCreatedAt(LocalDateTime.now());
+                        LocalDateTime NOW = LocalDateTime.now();
+                        newFeedbackEntity.setCreatedAt(NOW);
+                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
+                                .type(usedCredit.getType())
+                                .usedDate(NOW)
+                                .feedbackEntity(newFeedbackEntity)
+                                .build();
+                        myMemberEntity.get().addCreditHistory(historyEntity);
                         newFeedbackEntity.setIsHead(true);
                         oldFeedbackEntity.get().setIsHead(false);
 

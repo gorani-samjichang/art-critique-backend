@@ -16,6 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CreditController {
     final CreditRepository creditRepository;
+    final CreditUsedHistoryRepository creditUsedHistoryRepository;
     @GetMapping("/payment-history")
     HashMap<String, Object> paymentHistory(@AuthenticationPrincipal CustomUserDetails userDetails) {
         Integer remainPrepaymentCredit = creditRepository.sumOfPrepaymentCredit(userDetails.getUid());
@@ -34,7 +35,22 @@ public class CreditController {
     }
 
     @GetMapping("/usage-history")
+    List<HashMap<String, Object>> usageHistory(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<CreditUsedHistoryEntity> history =  creditUsedHistoryRepository.findAllByUid(userDetails.getUid());
 
+        List<HashMap<String, Object>> dto = new ArrayList<>();
+
+        for (CreditUsedHistoryEntity h : history) {
+            HashMap<String, Object> map = new HashMap<>();
+            map.put("usedDate", h.getUsedDate());
+            map.put("imageUrl", h.getFeedbackEntity().getPictureUrl());
+            map.put("serialNumber", h.getFeedbackEntity().getSerialNumber());
+            map.put("type", h.getType());
+            dto.add(map);
+        }
+
+        return dto;
+    }
 
     CreditDto convertEntityToDto(CreditEntity entity) {
         return CreditDto.builder()
