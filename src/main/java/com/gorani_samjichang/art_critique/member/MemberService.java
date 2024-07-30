@@ -185,7 +185,7 @@ public class MemberService {
             String level,
             MultipartFile profile
     ) throws IOException {
-        MemberEntity memberEntity = userDetails.memberEntity;
+        MemberEntity memberEntity = userDetails.getMemberEntity();
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {
@@ -198,6 +198,7 @@ public class MemberService {
 
         return memberEntityToDto(memberEntity);
     }
+
 
     public boolean oauthGoogleLogin(String idToken, HttpServletResponse response) throws UnsupportedEncodingException {
         GoogleIdToken.Payload payload =  webClientBuilder.build()
