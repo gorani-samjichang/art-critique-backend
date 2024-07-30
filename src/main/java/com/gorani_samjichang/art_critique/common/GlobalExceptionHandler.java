@@ -37,4 +37,6 @@ public class GlobalExceptionHandler {
     }
 
     // Todo: XUserNotFoundExceiptionHandler
+    // Todo: BadFeeedbackRequest
+    // Todo: NoPermissionException
 }
