@@ -106,7 +106,8 @@ public class MemberService {
 
 
     public Integer readCredit(CustomUserDetails userDetails){
-        return userDetails.memberEntity.getCredit();
+//        return userDetails.memberEntity.getCredit();
+        return memberRepository.getCreditByUid(userDetails.getUid());
     }
 
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
@@ -277,7 +278,7 @@ public class MemberService {
         try{
 
         }catch (Exception e){
-            throw new MessagingException("이메일이 유효하지 않거나 메일 서비스가 이용 불가능합니다.")
+            throw new MessagingException("이메일이 유효하지 않거나 메일 서비스가 이용 불가능합니다.");
         }
     }
 }

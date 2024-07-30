@@ -16,7 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -67,10 +66,13 @@ public class FeedbackService {
 
     public String requestFeedback(
             MultipartFile imageFile,
-            CustomUserDetails userDetails) throws IOException {
-        MemberEntity me = memberRepository.findById(userDetails.getUid()).orElseThrow(()->new UserNotFoundException("User not found"));
+            CustomUserDetails userDetails) throws IOException, UserNotFoundException {
+//        MemberEntity me = userDetails.getMemberEntity();
+        MemberEntity me = memberRepository.findById(userDetails.getUid()).orElseThrow(() -> new UserNotFoundException("user not found"));
         CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
         if (me.getCredit() <= 0 || usedCredit == null) {
+
+            System.out.println(1);
             return "noCredit";
         }
 
@@ -87,6 +89,7 @@ public class FeedbackService {
                 .isHead(true)
                 .tail(null)
                 .build();
+        System.out.println(2);
 
         feedbackRepository.save(feedbackEntity);
 
@@ -96,8 +99,10 @@ public class FeedbackService {
         creditRepository.save(usedCredit);
 
         memberRepository.save(me);
+        System.out.println(3);
 
         try {
+            System.out.println(4);
             String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
             webClientBuilder.build()
                     .post()
@@ -107,6 +112,7 @@ public class FeedbackService {
                     .retrieve()
                     .bodyToMono(FeedbackEntity.class)
                     .doOnNext(pythonResponse -> {
+                        System.out.println(5);
                         if (pythonResponse != null) {
                             commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
                             for (FeedbackResultEntity fre : feedbackEntity.getFeedbackResults()) {
@@ -155,25 +161,25 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackRecentOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidOrderByCreatedAtDesc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtDesc(uid, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidOrderByCreatedAtAsc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(uid, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidOrderByTotalScoreDesc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
-    public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page){
+    public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedOrderByCreatedAtDesc(uid, true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
@@ -186,9 +192,9 @@ public class FeedbackService {
 
     }
 
-    public void turnBookmark(String serialNumber, long uid, boolean target){
-        FeedbackEntity feedbackEntity=feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(()->new CannotFindBySerialNumberException("feedback not exists"));
-        if (feedbackEntity.getMemberEntity().getUid()!=uid){
+    public void turnBookmark(String serialNumber, long uid, boolean target) {
+        FeedbackEntity feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(() -> new CannotFindBySerialNumberException("feedback not exists"));
+        if (feedbackEntity.getMemberEntity().getUid() != uid) {
             throw new NoPermissionException("You are not allowed to turn this feedback");
         }
         feedbackEntity.setIsBookmarked(target);
