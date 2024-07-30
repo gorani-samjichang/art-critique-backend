@@ -3,6 +3,7 @@ package com.gorani_samjichang.art_critique.feedback;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
+import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryRepository;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
@@ -185,12 +186,13 @@ public class FeedbackController {
     List<PastFeedbackDto> scoreOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
         return feedbackService.getFeedbackTotalScoreOrder(userDetail.getUid(), 0);
     }
-    // todo: 0에 대한 처리가 끝나면 지울것.
+
     @GetMapping("/bookmark/{page}")
     List<PastFeedbackDto> bookmarkZero(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
         return feedbackService.getFeedbackBookmark(userDetail.getUid(), page);
     }
 
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/bookmark")
     List<PastFeedbackDto> bookmark(@AuthenticationPrincipal CustomUserDetails userDetail) {
         return feedbackService.getFeedbackBookmark(userDetail.getUid(), 0);
@@ -267,51 +269,16 @@ public class FeedbackController {
 
         return new ResponseEntity<>(newSerialNumber, HttpStatusCode.valueOf(200));
     }
-
+// todo: false 반환이 없음.
     @PostMapping("/turn-off-bookmark/{serialNumber}")
-    boolean turnOffBookMark(@PathVariable String serialNumber, HttpServletResponse response) {
-        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-        if (feedbackEntity.isEmpty()) {
-            response.setStatus(401);
-            return false;
-        }
-        if (!feedbackEntity.get().getIsBookmarked()) {
-            return false;
-        }
-        feedbackEntity.get().setIsBookmarked(false);
-        feedbackRepository.save(feedbackEntity.get());
+    boolean turnOffBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        feedbackService.turnBookmark(serialNumber, userDetails.getUid(), false);
         return true;
     }
-
+// todo: false 반환이 없음.
     @PostMapping("/turn-on-bookmark/{serialNumber}")
-    boolean turnOnBookMark(@PathVariable String serialNumber, HttpServletResponse response) {
-        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-        if (feedbackEntity.isEmpty()) {
-            response.setStatus(401);
-            return false;
-        }
-        if (feedbackEntity.get().getIsBookmarked()) {
-            return false;
-        }
-        feedbackEntity.get().setIsBookmarked(true);
-        feedbackRepository.save(feedbackEntity.get());
+    boolean turnOnBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        feedbackService.turnBookmark(serialNumber, userDetails.getUid(), true);
         return true;
-    }
-
-    List<PastFeedbackDto> convertFeedbackEntityToDto(List<FeedbackEntity> list) {
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : list) {
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-        return feedbackEntities;
     }
 }

@@ -2,6 +2,7 @@ package com.gorani_samjichang.art_critique.feedback;
 
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.BadFeedbackRequest;
+import com.gorani_samjichang.art_critique.common.exceptions.CannotFindBySerialNumberException;
 import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
 import com.gorani_samjichang.art_critique.common.exceptions.ServiceNotAvailableException;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -185,6 +187,15 @@ public class FeedbackService {
         }
         return feedbackDtos;
 
+    }
+
+    public void turnBookmark(String serialNumber, long uid, boolean target){
+        FeedbackEntity feedbackEntity=feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(()->new CannotFindBySerialNumberException("feedback not exists"));
+        if (feedbackEntity.getMemberEntity().getUid()!=uid){
+            throw new NoPermissionException("You are not allowed to turn this feedback");
+        }
+        feedbackEntity.setIsBookmarked(target);
+        feedbackRepository.save(feedbackEntity);
     }
 
     public PastFeedbackDto convertFeedbackEntityToDto(FeedbackEntity feedbackEntity) {
