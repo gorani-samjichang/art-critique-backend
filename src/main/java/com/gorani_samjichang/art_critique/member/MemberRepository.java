@@ -4,12 +4,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByNickname(String nickname);
 
-    MemberEntity findByEmail(String email);
+    Optional<MemberEntity> findByEmail(String email);
 
     MemberEntity findByEmailAndIsDeleted(String email, boolean b);
 
