@@ -103,7 +103,6 @@ public class FeedbackController {
 
         memberRepository.save(me.get());
 
-        try {
             String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
             webClientBuilder.build()
                     .post()
@@ -133,9 +132,6 @@ public class FeedbackController {
                     })
                     .subscribe();
 
-        } catch(Exception e) {
-            return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
-        }
 
         return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
     }
