@@ -37,11 +37,16 @@ public class CustomUserDetails implements UserDetails {
     public String getRole() {
         return memberEntity.getRole();
     }
+
     public String getSerialNumber() {
         return memberEntity.getSerialNumber();
     }
+
     public Long getUid() {
         return memberEntity.getUid();
     }
-    public MemberEntity getMemberEntity() { return memberEntity; }
+
+    public MemberEntity getMemberEntity() {
+        return memberEntity;
+    }
 }

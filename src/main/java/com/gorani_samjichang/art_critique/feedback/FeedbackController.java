@@ -8,7 +8,6 @@ import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryRepository;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +22,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 @RequestMapping("/feedback")
 @RequiredArgsConstructor
 public class FeedbackController {
-
+    final FeedbackService feedbackService;
     final FeedbackRepository feedbackRepository;
     final MemberRepository memberRepository;
     final CreditRepository creditRepository;
@@ -43,101 +45,18 @@ public class FeedbackController {
     private String feedbackServerHost;
     final EmitterService emitterService;
 
-    String [] dummyTodayGoodImage = new String [] {
-            "https://picsum.photos/id/88/180/160",
-            "https://picsum.photos/id/51/200/200",
-            "https://picsum.photos/id/50/260/240",
-            "https://picsum.photos/id/9/180/160",
-            "https://picsum.photos/id/55/260/280",
-            "https://picsum.photos/id/70/220/220",
-            "https://picsum.photos/id/57/160/300",
-            "https://picsum.photos/id/19/300/120",
-            "https://picsum.photos/id/99/100/100",
-            "https://picsum.photos/id/26/300/260",
-            "https://picsum.photos/id/71/120/120",
-            "https://picsum.photos/id/69/160/160",
-            "https://picsum.photos/id/39/100/120",
-            "https://picsum.photos/id/27/240/160",
-            "https://picsum.photos/id/15/240/140"
-    };
 
     @GetMapping("/public/good-image")
-    String [] getGoodImage() {
-        String [] todayGoodImage = dummyTodayGoodImage;
-        return todayGoodImage;
+    String[] getGoodImage() {
+        return feedbackService.getGoodImage();
     }
 
     @PostMapping("/request")
     ResponseEntity<String> requestFeedback(
             @RequestParam("image") MultipartFile imageFile,
-            @AuthenticationPrincipal CustomUserDetails userDetails, HttpServletResponse response) throws IOException {
+            @AuthenticationPrincipal CustomUserDetails userDetails) throws IOException {
 
-        Optional<MemberEntity> me = memberRepository.findById(userDetails.getUid());
-        CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
-        if (me.isEmpty()) return new ResponseEntity<>(null, HttpStatusCode.valueOf(401));
-        if (me.get().getCredit() <= 0 || usedCredit == null) {
-            return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
-        }
-
-        String serialNumber = UUID.randomUUID().toString();
-        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
-        FeedbackEntity feedbackEntity = FeedbackEntity
-                .builder()
-                .serialNumber(serialNumber)
-                .state("NOT_STARTED")
-                .progressRate(0)
-                .isBookmarked(false)
-                .isPublic(true)
-                .pictureUrl(imageUrl)
-                .isHead(true)
-                .tail(null)
-                .build();
-
-        feedbackRepository.save(feedbackEntity);
-
-        me.get().addFeedback(feedbackEntity);
-        me.get().setCredit(me.get().getCredit() - 1);
-        usedCredit.useCredit();
-
-        creditRepository.save(usedCredit);
-
-        memberRepository.save(me.get());
-
-        try {
-            String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
-            webClientBuilder.build()
-                    .post()
-                    .uri(feedbackServerHost + "/request")
-                    .header("Content-Type", "application/json")
-                    .bodyValue(jsonData)
-                    .retrieve()
-                    .bodyToMono(FeedbackEntity.class)
-                    .doOnNext(pythonResponse -> {
-                        if (pythonResponse != null) {
-                            commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
-                            for (FeedbackResultEntity fre : feedbackEntity.getFeedbackResults()) {
-                                fre.setFeedbackEntity(feedbackEntity);
-                            }
-                        }
-
-                        LocalDateTime NOW = LocalDateTime.now();
-                        feedbackEntity.setCreatedAt(NOW);
-                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
-                                .type(usedCredit.getType())
-                                .usedDate(NOW)
-                                .feedbackEntity(feedbackEntity)
-                                .build();
-                        me.get().addCreditHistory(historyEntity);
-                        creditUsedHistoryRepository.save(historyEntity);
-                        feedbackRepository.save(feedbackEntity);
-                    })
-                    .subscribe();
-
-        } catch(Exception e) {
-            return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
-        }
-
-        return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
+        return new ResponseEntity<>(feedbackService.requestFeedback(imageFile, userDetails), HttpStatusCode.valueOf(200));
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
@@ -153,8 +72,8 @@ public class FeedbackController {
                 for (int i = 0; i <= 50; i++) {
                     Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
                     emitter.send(SseEmitter.event()
-                            .name("pending")
-                            .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                                    .name("pending")
+                                    .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
 //                            .data("{\"rate\":" + i + "}")
                     );
                     TimeUnit.MILLISECONDS.sleep(1000);
@@ -231,56 +150,58 @@ public class FeedbackController {
     boolean feedbackReview(@PathVariable String serialNumber,
                            @RequestParam boolean isLike,
                            @RequestParam String review,
-                           HttpServletRequest request,
-                           HttpServletResponse response) {
-        if (review.length() < 9) {
-            response.setStatus(401);
-            return false;
-        }
-        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-        if (feedbackEntity.isEmpty()) {
-            response.setStatus(401);
-        } else {
-            if (!feedbackEntity.get().getMemberEntity().getEmail().equals(request.getAttribute("email"))) {
-                response.setStatus(401);
-                return false;
-            }
-            feedbackEntity.get().setUserReview(isLike);
-            feedbackEntity.get().setUserReviewDetail(review);
-            feedbackRepository.save(feedbackEntity.get());
-            return true;
-        }
-        return false;
+                           @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return feedbackService.feedbackReview(serialNumber, isLike, review, userDetails);
     }
 
+    @GetMapping("/write-order/{page}")
+    List<PastFeedbackDto> writeOrder(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackCreatedAtOrder(userDetail.getUid(), page);
+    }
+
+    @GetMapping("/recent-order/{page}")
+    List<PastFeedbackDto> recentOrder(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackRecentOrder(userDetail.getUid(), page);
+    }
+
+    @GetMapping("/score-order/{page}")
+    List<PastFeedbackDto> scoreOrder(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackTotalScoreOrder(userDetail.getUid(), page);
+    }
+
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/write-order")
-    List<PastFeedbackDto> writeOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByWriteOrder(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+    List<PastFeedbackDto> writeOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        return feedbackService.getFeedbackCreatedAtOrder(userDetail.getUid(), 0);
     }
 
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/recent-order")
-    List<PastFeedbackDto> recentOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByRecentOrder(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+    List<PastFeedbackDto> recentOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        return feedbackService.getFeedbackRecentOrder(userDetail.getUid(), 0);
     }
 
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/score-order")
-    List<PastFeedbackDto> scoreOrder(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByScoreOrder(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+    List<PastFeedbackDto> scoreOrderZero(@AuthenticationPrincipal CustomUserDetails userDetail) {
+        return feedbackService.getFeedbackTotalScoreOrder(userDetail.getUid(), 0);
     }
 
+    @GetMapping("/bookmark/{page}")
+    List<PastFeedbackDto> bookmarkZero(@AuthenticationPrincipal CustomUserDetails userDetail, @PathVariable int page) {
+        return feedbackService.getFeedbackBookmark(userDetail.getUid(), page);
+    }
+
+    // todo: 0에 대한 처리가 끝나면 지울것.
     @GetMapping("/bookmark")
     List<PastFeedbackDto> bookmark(@AuthenticationPrincipal CustomUserDetails userDetail) {
-        List<FeedbackEntity> entities = feedbackRepository.findByUidAndBookmarked(userDetail.getUid());
-        return convertFeedbackEntityToDto(entities);
+        return feedbackService.getFeedbackBookmark(userDetail.getUid(), 0);
     }
 
     @PostMapping("/re-request/{serialNumber}")
     ResponseEntity<String> reRequest(@PathVariable String serialNumber,
-                  @AuthenticationPrincipal CustomUserDetails userDetails,
-                  HttpServletResponse response) {
+                                     @AuthenticationPrincipal CustomUserDetails userDetails,
+                                     HttpServletResponse response) {
 
         Optional<MemberEntity> myMemberEntity = memberRepository.findById(userDetails.getUid());
         CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
@@ -342,57 +263,22 @@ public class FeedbackController {
                         feedbackRepository.save(newFeedbackEntity);
                     })
                     .subscribe();
-        } catch(Exception e) {
+        } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
         }
 
         return new ResponseEntity<>(newSerialNumber, HttpStatusCode.valueOf(200));
     }
-
+// todo: false 반환이 없음.
     @PostMapping("/turn-off-bookmark/{serialNumber}")
-    boolean turnOffBookMark(@PathVariable String serialNumber, HttpServletResponse response) {
-        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-        if (feedbackEntity.isEmpty()) {
-            response.setStatus(401);
-            return false;
-        }
-        if (!feedbackEntity.get().getIsBookmarked()) {
-            return false;
-        }
-        feedbackEntity.get().setIsBookmarked(false);
-        feedbackRepository.save(feedbackEntity.get());
+    boolean turnOffBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        feedbackService.turnBookmark(serialNumber, userDetails.getUid(), false);
         return true;
     }
-
+// todo: false 반환이 없음.
     @PostMapping("/turn-on-bookmark/{serialNumber}")
-    boolean turnOnBookMark(@PathVariable String serialNumber, HttpServletResponse response) {
-        Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-        if (feedbackEntity.isEmpty()) {
-            response.setStatus(401);
-            return false;
-        }
-        if (feedbackEntity.get().getIsBookmarked()) {
-            return false;
-        }
-        feedbackEntity.get().setIsBookmarked(true);
-        feedbackRepository.save(feedbackEntity.get());
+    boolean turnOnBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        feedbackService.turnBookmark(serialNumber, userDetails.getUid(), true);
         return true;
-    }
-
-    List<PastFeedbackDto> convertFeedbackEntityToDto(List<FeedbackEntity> list) {
-        ArrayList<PastFeedbackDto> feedbackEntities = new ArrayList<>();
-        for (FeedbackEntity f : list) {
-            feedbackEntities.add(PastFeedbackDto
-                    .builder()
-                    .isBookmarked(f.getIsBookmarked())
-                    .pictureUrl(f.getPictureUrl())
-                    .createdAt(f.getCreatedAt())
-                    .version(f.getVersion())
-                    .serialNumber(f.getSerialNumber())
-                    .totalScore(f.getTotalScore())
-                    .isSelected(false)
-                    .build());
-        }
-        return feedbackEntities;
     }
 }
