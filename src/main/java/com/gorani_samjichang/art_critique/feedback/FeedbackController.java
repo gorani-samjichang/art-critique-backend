@@ -62,6 +62,7 @@ public class FeedbackController {
     @GetMapping("/public/retrieve/{serialNumber}")
     public SseEmitter retrieve(@PathVariable String serialNumber, HttpServletResponse response) {
         SseEmitter emitter = new SseEmitter();
+        String imageUrl = feedbackRepository.getImageUrlBySerialNumber(serialNumber);
 
         // threadSafe 한지 아직 알 수 없음
         // 아마 이 원리 그대로 진행 할 것 같음
@@ -69,7 +70,7 @@ public class FeedbackController {
         // 프론트 - 스프링 / 스프링 - 파이썬 은 완전히 별개의 연결이고 파이썬과 스프링의 연결의 결과는 데이터베이스에 반영이되야하고, 스프링과 프론트의 연결은 프론트에 반영되야함
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
-                for (int i = 0; i <= 50; i++) {
+                for (int i = 0; i <= 120; i++) {
                     Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
                     emitter.send(SseEmitter.event()
                                     .name("pending")
@@ -113,7 +114,7 @@ public class FeedbackController {
 //        return emitterService.connection(serialNumber, response);
     }
 
-    @GetMapping("/retrieve/{serialNumber}")
+    @GetMapping("/public/simple-retrieve/{serialNumber}")
     RetrieveFeedbackDto simpleRetrieve(
             @PathVariable String serialNumber,
             HttpServletResponse response) {
