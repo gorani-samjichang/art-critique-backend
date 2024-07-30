@@ -17,4 +17,6 @@ public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> 
     List<FeedbackEntity> findByScoreOrder(@Param("uid") Long uid);
     @Query("SELECT p FROM FeedbackEntity p WHERE p.isHead = true and p.memberEntity.uid = :uid and p.isBookmarked = true order by p.createdAt desc")
     List<FeedbackEntity> findByUidAndBookmarked(@Param("uid") Long uid);
+    @Query("select p.serialNumber from FeedbackEntity p where p.serialNumber = :serialNumber")
+    String getImageUrlBySerialNumber(@Param("serialNumber") String serialNumber);
 }
