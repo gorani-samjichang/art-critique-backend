@@ -1,10 +1,7 @@
 package com.gorani_samjichang.art_critique.feedback;
 
 import com.gorani_samjichang.art_critique.common.CommonUtil;
-import com.gorani_samjichang.art_critique.common.exceptions.BadFeedbackRequest;
-import com.gorani_samjichang.art_critique.common.exceptions.CannotFindBySerialNumberException;
-import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
-import com.gorani_samjichang.art_critique.common.exceptions.ServiceNotAvailableException;
+import com.gorani_samjichang.art_critique.common.exceptions.*;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
@@ -24,9 +21,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -70,11 +69,14 @@ public class FeedbackService {
 
     public String requestFeedback(
             MultipartFile imageFile,
-            CustomUserDetails userDetails) throws IOException {
-        MemberEntity me = userDetails.getMemberEntity();
+            CustomUserDetails userDetails) throws IOException, UserNotFoundException {
+//        MemberEntity me = userDetails.getMemberEntity();
+        MemberEntity me = memberRepository.findById(userDetails.getUid()).orElseThrow(() -> new UserNotFoundException("user not found"));
         CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
         if (me.getCredit() <= 0 || usedCredit == null) {
-            return "no Credit";
+
+            System.out.println(1);
+            return "noCredit";
         }
 
         String serialNumber = UUID.randomUUID().toString();
@@ -90,6 +92,7 @@ public class FeedbackService {
                 .isHead(true)
                 .tail(null)
                 .build();
+        System.out.println(2);
 
         feedbackRepository.save(feedbackEntity);
 
@@ -99,8 +102,10 @@ public class FeedbackService {
         creditRepository.save(usedCredit);
 
         memberRepository.save(me);
+        System.out.println(3);
 
         try {
+            System.out.println(4);
             String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
             webClientBuilder.build()
                     .post()
@@ -110,6 +115,7 @@ public class FeedbackService {
                     .retrieve()
                     .bodyToMono(FeedbackEntity.class)
                     .doOnNext(pythonResponse -> {
+                        System.out.println(5);
                         if (pythonResponse != null) {
                             commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
                             for (FeedbackResultEntity fre : feedbackEntity.getFeedbackResults()) {

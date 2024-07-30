@@ -103,7 +103,8 @@ public class MemberService {
 
 
     public Integer readCredit(CustomUserDetails userDetails){
-        return userDetails.memberEntity.getCredit();
+//        return userDetails.memberEntity.getCredit();
+        return memberRepository.getCreditByUid(userDetails.getUid());
     }
 
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
