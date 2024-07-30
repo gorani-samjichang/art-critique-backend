@@ -161,25 +161,25 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackRecentOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtDesc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid,true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true,true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
