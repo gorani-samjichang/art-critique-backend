@@ -12,12 +12,12 @@ import java.util.Optional;
 
 public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> {
     Optional<FeedbackEntity> findBySerialNumber(String serialNumber);
-    Slice<FeedbackEntity> findByMemberEntityUidOrderByCreatedAtDesc(Long uid, Pageable page);
-    Slice<FeedbackEntity> findByMemberEntityUidOrderByCreatedAtAsc(Long uid, Pageable page);
-    Slice<FeedbackEntity> findByMemberEntityUidOrderByTotalScoreDesc(Long uid, Pageable page);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadOrderByCreatedAtDesc(Long uid, boolean isHead,Pageable page);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(Long uid, boolean isHead,Pageable page);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(Long uid, boolean isHead, Pageable page);
     @Query("SELECT p FROM FeedbackEntity p WHERE p.isHead = true and p.memberEntity.uid = :uid and p.isBookmarked = true order by p.createdAt desc")
     List<FeedbackEntity> findByUidAndBookmarked(@Param("uid") Long uid);
     @Query("select p.serialNumber from FeedbackEntity p where p.serialNumber = :serialNumber")
     String getImageUrlBySerialNumber(@Param("serialNumber") String serialNumber);
-    Slice<FeedbackEntity> findByMemberEntityUidAndIsBookmarkedOrderByCreatedAtDesc(Long uid, Boolean isBookmarked, Pageable page);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(Long uid, Boolean isBookmarked, boolean isHead, Pageable page);
 }

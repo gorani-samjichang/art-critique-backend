@@ -74,8 +74,6 @@ public class FeedbackService {
         MemberEntity me = memberRepository.findById(userDetails.getUid()).orElseThrow(() -> new UserNotFoundException("user not found"));
         CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
         if (me.getCredit() <= 0 || usedCredit == null) {
-
-            System.out.println(1);
             return "noCredit";
         }
 
@@ -92,7 +90,6 @@ public class FeedbackService {
                 .isHead(true)
                 .tail(null)
                 .build();
-        System.out.println(2);
 
         feedbackRepository.save(feedbackEntity);
 
@@ -102,10 +99,8 @@ public class FeedbackService {
         creditRepository.save(usedCredit);
 
         memberRepository.save(me);
-        System.out.println(3);
 
         try {
-            System.out.println(4);
             String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
             webClientBuilder.build()
                     .post()
@@ -115,7 +110,6 @@ public class FeedbackService {
                     .retrieve()
                     .bodyToMono(FeedbackEntity.class)
                     .doOnNext(pythonResponse -> {
-                        System.out.println(5);
                         if (pythonResponse != null) {
                             commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
                             for (FeedbackResultEntity fre : feedbackEntity.getFeedbackResults()) {
@@ -164,25 +158,25 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackRecentOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidOrderByCreatedAtDesc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidOrderByCreatedAtAsc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidOrderByTotalScoreDesc(uid, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page){
         Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedOrderByCreatedAtDesc(uid, true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
