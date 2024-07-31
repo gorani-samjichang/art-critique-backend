@@ -1,5 +1,6 @@
 package com.gorani_samjichang.art_critique.feedback;
 
+import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
@@ -56,13 +57,12 @@ public class FeedbackController {
             @RequestParam("image") MultipartFile imageFile,
             @AuthenticationPrincipal CustomUserDetails userDetails) throws IOException {
 
-        return new ResponseEntity<>(feedbackService.requestFeedback(imageFile, userDetails), HttpStatusCode.valueOf(200));
+        return feedbackService.requestFeedback(imageFile, userDetails);
     }
 
     @GetMapping("/public/retrieve/{serialNumber}")
-    public SseEmitter retrieve(@PathVariable String serialNumber, HttpServletResponse response) {
+    public SseEmitter retrieve(@PathVariable String serialNumber) {
         SseEmitter emitter = new SseEmitter();
-        String imageUrl = feedbackRepository.getImageUrlBySerialNumber(serialNumber);
 
         // threadSafe 한지 아직 알 수 없음
         // 아마 이 원리 그대로 진행 할 것 같음
@@ -75,7 +75,6 @@ public class FeedbackController {
                     emitter.send(SseEmitter.event()
                                     .name("pending")
                                     .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
-//                            .data("{\"rate\":" + i + "}")
                     );
                     TimeUnit.MILLISECONDS.sleep(1000);
                     if (feedbackEntity.get().getState().equals("COMPLETED")) {
@@ -87,6 +86,7 @@ public class FeedbackController {
                                 .serialNumber(feedbackEntity.get().getSerialNumber())
                                 .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
                                 .userReview(feedbackEntity.get().getUserReview())
+                                .state(feedbackEntity.get().getState())
                                 .build();
 
                         List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
@@ -103,11 +103,26 @@ public class FeedbackController {
                                 .data(dto)
                         );
                         break;
+                    } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
+                        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
+                                .isBookmarked(feedbackEntity.get().getIsBookmarked())
+                                .version(feedbackEntity.get().getVersion())
+                                .createdAt(feedbackEntity.get().getCreatedAt())
+                                .pictureUrl(feedbackEntity.get().getPictureUrl())
+                                .serialNumber(feedbackEntity.get().getSerialNumber())
+                                .state(feedbackEntity.get().getState())
+                                .build();
+
+                        emitter.send(SseEmitter.event()
+                                .name("fail")
+                                .data(dto)
+                        );
+                        break;
                     }
                 }
                 emitter.complete();
             } catch (IOException | InterruptedException e) {
-                System.out.println("!!!");
+
             }
         });
         return emitter;
@@ -233,40 +248,44 @@ public class FeedbackController {
         myMemberEntity.get().addFeedback(newFeedbackEntity);
         memberRepository.save(myMemberEntity.get());
 
-        try {
-            String jsonData = "{\"name\": " + "\"" + imageUrl + "\"}";
-            webClientBuilder.build()
-                    .post()
-                    .uri(feedbackServerHost + "/request")
-                    .header("Content-Type", "application/json")
-                    .bodyValue(jsonData)
-                    .retrieve()
-                    .bodyToMono(FeedbackEntity.class)
-                    .doOnNext(pythonResponse -> {
-                        if (pythonResponse != null) {
-                            commonUtil.copyNonNullProperties(pythonResponse, newFeedbackEntity);
-                            for (FeedbackResultEntity fre : newFeedbackEntity.getFeedbackResults()) {
-                                fre.setFeedbackEntity(newFeedbackEntity);
-                            }
-                        }
-                        LocalDateTime NOW = LocalDateTime.now();
-                        newFeedbackEntity.setCreatedAt(NOW);
-                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
-                                .type(usedCredit.getType())
-                                .usedDate(NOW)
-                                .feedbackEntity(newFeedbackEntity)
-                                .build();
-                        myMemberEntity.get().addCreditHistory(historyEntity);
-                        newFeedbackEntity.setIsHead(true);
-                        oldFeedbackEntity.get().setIsHead(false);
+        String jsonData = "{\"name\": " + "\"" + imageUrl + "\"}";
+        webClientBuilder.build()
+                .post()
+                .uri(feedbackServerHost + "/request")
+                .header("Content-Type", "application/json")
+                .bodyValue(jsonData)
+                .retrieve()
+                .bodyToMono(FeedbackEntity.class)
+                .doOnError(error -> {
+                    System.out.println("!!!@@@");
+                    usedCredit.refundCredit();
+                    newFeedbackEntity.setState(FeedbackState.FAIL);
+                    LocalDateTime NOW = LocalDateTime.now();
+                    newFeedbackEntity.setCreatedAt(NOW);
+                    creditRepository.save(usedCredit);
+                    feedbackRepository.save(newFeedbackEntity);
+                    memberRepository.save(myMemberEntity.get());
+                })
+                .doOnNext(pythonResponse -> {
+                    for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
+                        fre.setFeedbackEntity(newFeedbackEntity);
+                    }
+                    commonUtil.copyNonNullProperties(pythonResponse, newFeedbackEntity);
+                    LocalDateTime NOW = LocalDateTime.now();
+                    newFeedbackEntity.setCreatedAt(NOW);
+                    CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
+                            .type(usedCredit.getType())
+                            .usedDate(NOW)
+                            .feedbackEntity(newFeedbackEntity)
+                            .build();
+                    myMemberEntity.get().addCreditHistory(historyEntity);
+                    newFeedbackEntity.setIsHead(true);
+                    oldFeedbackEntity.get().setIsHead(false);
 
-                        feedbackRepository.save(oldFeedbackEntity.get());
-                        feedbackRepository.save(newFeedbackEntity);
-                    })
-                    .subscribe();
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatusCode.valueOf(501));
-        }
+                    feedbackRepository.save(oldFeedbackEntity.get());
+                    feedbackRepository.save(newFeedbackEntity);
+                })
+                .subscribe();
 
         return new ResponseEntity<>(newSerialNumber, HttpStatusCode.valueOf(200));
     }

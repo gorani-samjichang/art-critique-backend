@@ -1,5 +1,6 @@
 package com.gorani_samjichang.art_critique.feedback;
 
+import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.*;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
@@ -14,12 +15,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.net.http.HttpResponse;
+import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,14 +72,13 @@ public class FeedbackService {
         return todayGoodImage;
     }
 
-    public String requestFeedback(
+    public ResponseEntity<String> requestFeedback(
             MultipartFile imageFile,
             CustomUserDetails userDetails) throws IOException, UserNotFoundException {
-//        MemberEntity me = userDetails.getMemberEntity();
         MemberEntity me = memberRepository.findById(userDetails.getUid()).orElseThrow(() -> new UserNotFoundException("user not found"));
         CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
         if (me.getCredit() <= 0 || usedCredit == null) {
-            return "noCredit";
+            return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
         }
 
         String serialNumber = UUID.randomUUID().toString();
@@ -88,50 +95,51 @@ public class FeedbackService {
                 .tail(null)
                 .build();
 
-        feedbackRepository.save(feedbackEntity);
-
         me.addFeedback(feedbackEntity);
-        me.setCredit(me.getCredit() - 1);
         usedCredit.useCredit();
-        creditRepository.save(usedCredit);
 
+        creditRepository.save(usedCredit);
+        feedbackRepository.save(feedbackEntity);
         memberRepository.save(me);
 
-        try {
-            String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
-            webClientBuilder.build()
-                    .post()
-                    .uri(feedbackServerHost + "/request")
-                    .header("Content-Type", "application/json")
-                    .bodyValue(jsonData)
-                    .retrieve()
-                    .bodyToMono(FeedbackEntity.class)
-                    .doOnNext(pythonResponse -> {
-                        if (pythonResponse != null) {
-                            commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
-                            for (FeedbackResultEntity fre : feedbackEntity.getFeedbackResults()) {
-                                fre.setFeedbackEntity(feedbackEntity);
-                            }
-                        }
+        String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
+        webClientBuilder.build()
+                .post()
+                .uri(feedbackServerHost + "/request")
+                .header("Content-Type", "application/json")
+                .bodyValue(jsonData)
+                .retrieve()
+                .bodyToMono(FeedbackEntity.class)
+                .doOnError(error -> {
+                    usedCredit.refundCredit();
+                    feedbackEntity.setState(FeedbackState.FAIL);
+                    LocalDateTime NOW = LocalDateTime.now();
+                    feedbackEntity.setCreatedAt(NOW);
+                    creditRepository.save(usedCredit);
+                    feedbackRepository.save(feedbackEntity);
+                    memberRepository.save(me);
+                })
+                .doOnNext(pythonResponse -> {
+                    for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
+                        fre.setFeedbackEntity(feedbackEntity);
+                    }
+                    commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
 
-                        LocalDateTime NOW = LocalDateTime.now();
-                        feedbackEntity.setCreatedAt(NOW);
-                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
-                                .type(usedCredit.getType())
-                                .usedDate(NOW)
-                                .feedbackEntity(feedbackEntity)
-                                .build();
-                        me.addCreditHistory(historyEntity);
-                        creditUsedHistoryRepository.save(historyEntity);
-                        feedbackRepository.save(feedbackEntity);
-                    })
-                    .subscribe();
+                    LocalDateTime NOW = LocalDateTime.now();
+                    feedbackEntity.setCreatedAt(NOW);
 
-        } catch (Exception e) {
-            throw new ServiceNotAvailableException("Feedback Server Error");
-        }
+                    CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
+                            .type(usedCredit.getType())
+                            .usedDate(NOW)
+                            .feedbackEntity(feedbackEntity)
+                            .build();
+                    me.addCreditHistory(historyEntity);
+                    creditUsedHistoryRepository.save(historyEntity);
+                    memberRepository.save(me);
+                })
+                .subscribe();
 
-        return serialNumber;
+        return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
     }
 
     boolean feedbackReview(String serialNumber,

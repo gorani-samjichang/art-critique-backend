@@ -1,6 +1,7 @@
 package com.gorani_samjichang.art_critique.credit;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.gorani_samjichang.art_critique.appConstant.CreditState;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -34,6 +35,13 @@ public class CreditEntity {
     public void useCredit() {
         this.remainAmount--;
         this.usedAmount++;
+        this.memberEntity.setCredit(this.memberEntity.getCredit() - 1);
         if (remainAmount <= 0) this.state = "USED_UP";
+    }
+    public void refundCredit() {
+        this.remainAmount++;
+        this.usedAmount--;
+        this.memberEntity.setCredit(this.memberEntity.getCredit() + 1);
+        this.state = CreditState.VALID;
     }
 }
