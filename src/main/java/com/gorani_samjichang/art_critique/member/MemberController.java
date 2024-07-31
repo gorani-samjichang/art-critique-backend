@@ -59,8 +59,8 @@ public class MemberController {
     }
 
     @GetMapping("/public/emailCheck/{email}")
-    boolean emailCheck(@PathVariable String email) {
-        return memberService.emailCheck(email);
+    boolean emailCheck(@PathVariable String email, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
+        return memberService.emailCheck(email, response);
     }
 
     @GetMapping("/public/nicknameCheck/{nickname}")
@@ -108,21 +108,9 @@ public class MemberController {
     }
 
 
-    @GetMapping("/public/temp-token/{email}")
-    void tempToken(@PathVariable String email, HttpServletResponse response, HttpServletRequest request,String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+    @GetMapping("/public/temp-token/{email}/{code}")
+    void tempToken(@PathVariable String email, HttpServletResponse response, HttpServletRequest request,@PathVariable String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
         memberService.tempToken(email, response, request, code);
-    }
-
-    @PostMapping("/info/send-email/{email}")
-    public ResponseEntity<String> sendMail(HttpServletResponse response, @PathVariable String email) throws MessagingException, UnsupportedEncodingException {
-        memberService.sendEmail(email, response);
-
-        return new ResponseEntity<>("Check the Email", HttpStatusCode.valueOf(200));
-    }
-
-    @GetMapping("/info/verify-code/{email}/{code}")
-    public ResponseEntity<Boolean> verifyEmail(HttpServletRequest request, @PathVariable String code){
-        return new ResponseEntity<>(memberService.verifyEmailCheck(request, code), HttpStatusCode.valueOf(200));
     }
 
 

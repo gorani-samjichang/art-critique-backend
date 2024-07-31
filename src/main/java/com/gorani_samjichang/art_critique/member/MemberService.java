@@ -55,7 +55,8 @@ public class MemberService {
     @Value("${twitter.consumer.secret}")
     String twitterSecret;
 
-    public boolean emailCheck(String email) {
+    public boolean emailCheck(String email, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
+        sendEmail(email, response);
         return memberRepository.existsByEmail(email);
     }
 
