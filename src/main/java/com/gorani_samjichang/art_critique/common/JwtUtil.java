@@ -55,4 +55,14 @@ public class JwtUtil {
                 .compact();
     }
 
+    public String createEmailRandomJwt(String email, Long expireMs,String random){
+        return Jwts.builder()
+                .claim("email", email)
+                .claim("serialNumber", random)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expireMs))
+                .signWith(secretKey)
+                .compact();
+    }
+
 }

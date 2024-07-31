@@ -1,14 +1,20 @@
 package com.gorani_samjichang.art_critique.member;
 
 import com.google.firebase.auth.FirebaseAuthException;
+import com.gorani_samjichang.art_critique.common.JwtUtil;
+import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
+import com.gorani_samjichang.art_critique.feedback.FeedbackService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +29,8 @@ public class MemberController {
     final CreditRepository creditRepository;
     final MemberService memberService;
     final MemberRepository memberRepository;
+    final FeedbackService feedbackService;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("is-logined")
     boolean isLogined() {
@@ -71,7 +79,6 @@ public class MemberController {
 //    }
    Integer credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return memberService.readCredit(userDetails);
-
     }
     @GetMapping("/public/logout")
     void logout(HttpServletResponse response) {
@@ -102,8 +109,20 @@ public class MemberController {
 
 
     @GetMapping("/public/temp-token/{email}")
-    void tempToken(@PathVariable String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
-        memberService.tempToken(email, response);
+    void tempToken(@PathVariable String email, HttpServletResponse response, HttpServletRequest request,String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+        memberService.tempToken(email, response, request, code);
+    }
+
+    @PostMapping("/info/send-email/{email}")
+    public ResponseEntity<String> sendMail(HttpServletResponse response, @PathVariable String email) throws MessagingException, UnsupportedEncodingException {
+        memberService.sendEmail(email, response);
+
+        return new ResponseEntity<>("Check the Email", HttpStatusCode.valueOf(200));
+    }
+
+    @GetMapping("/info/verify-code/{email}/{code}")
+    public ResponseEntity<Boolean> verifyEmail(HttpServletRequest request, @PathVariable String code){
+        return new ResponseEntity<>(memberService.verifyEmailCheck(request, code), HttpStatusCode.valueOf(200));
     }
 
 

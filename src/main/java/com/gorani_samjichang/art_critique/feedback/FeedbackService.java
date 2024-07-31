@@ -20,7 +20,6 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -32,14 +31,13 @@ import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class FeedbackService {
     private final FeedbackRepository feedbackRepository;
-    private final int PAGESIZE = 4;
+    private static final int PAGE_SIZE = 4;
     final MemberRepository memberRepository;
     final CreditRepository creditRepository;
     final CreditUsedHistoryRepository creditUsedHistoryRepository;
@@ -149,9 +147,9 @@ public class FeedbackService {
                            String review,
                            CustomUserDetails userDetails) {
         if (review.length() < 9) {
-            throw new BadFeedbackRequest("too short review");
+            throw new BadFeedbackRequestException("too short review");
         }
-        FeedbackEntity feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(() -> new BadFeedbackRequest("Invalid SerialNumber"));
+        FeedbackEntity feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(() -> new BadFeedbackRequestException("Invalid SerialNumber"));
 
         if (!feedbackEntity.getMemberEntity().getUid().equals(userDetails.getUid())) {
             throw new NoPermissionException("Access Rejected");
@@ -164,26 +162,27 @@ public class FeedbackService {
 
 
     public List<PastFeedbackDto> getFeedbackRecentOrder(long uid, int page) {
-        Pageable pageable = PageRequest.of(page, PAGESIZE);
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
         Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
-        Pageable pageable = PageRequest.of(page, PAGESIZE);
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
         Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
-        Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid, true, pageable);
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid,true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
-    public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page){
-        Pageable pageable = PageRequest.of(page, PAGESIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true, true, pageable);
+    public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page) {
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true,true, pageable);
+
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
@@ -196,9 +195,9 @@ public class FeedbackService {
 
     }
 
-    public void turnBookmark(String serialNumber, long uid, boolean target){
-        FeedbackEntity feedbackEntity=feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(()->new CannotFindBySerialNumberException("feedback not exists"));
-        if (feedbackEntity.getMemberEntity().getUid()!=uid){
+    public void turnBookmark(String serialNumber, long uid, boolean target) {
+        FeedbackEntity feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(() -> new CannotFindBySerialNumberException("feedback not exists"));
+        if (feedbackEntity.getMemberEntity().getUid() != uid) {
             throw new NoPermissionException("You are not allowed to turn this feedback");
         }
         feedbackEntity.setIsBookmarked(target);
