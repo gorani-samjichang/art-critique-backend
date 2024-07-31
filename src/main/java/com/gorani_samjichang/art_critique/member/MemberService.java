@@ -43,10 +43,9 @@ public class MemberService {
     final AuthenticationManagerBuilder authenticationManagerBuilder;
     final WebClient.Builder webClientBuilder;
     final CommonUtil commonUtil;
-    private final MemberRepository memberRepository;
+    final MemberRepository memberRepository;
 
-    @Value("${google.smtp.pw}")
-    String googleMailKey;
+
     @Value("${token.verify.prefix}")
     String prefix;
     @Value("${twitter.consumer.key}")
@@ -106,8 +105,7 @@ public class MemberService {
 
 
     public Integer readCredit(CustomUserDetails userDetails){
-//        return userDetails.memberEntity.getCredit();
-        return memberRepository.getCreditByUid(userDetails.getUid());
+        return memberRepository.getCreditByUid(userDetails.getUid()).orElseThrow(()->new UserNotFoundException("User Not Found"));
     }
 
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
@@ -189,7 +187,7 @@ public class MemberService {
             String level,
             MultipartFile profile
     ) throws IOException {
-        MemberEntity memberEntity = userDetails.getMemberEntity();
+        MemberEntity memberEntity = memberRepository.findById(userDetails.getUid()).orElseThrow(()->new UserNotFoundException("User not found"));
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {

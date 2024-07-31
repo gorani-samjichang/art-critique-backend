@@ -25,7 +25,7 @@ public class MemberController {
     final CreditRepository creditRepository;
     final MemberService memberService;
     final MemberRepository memberRepository;
-    private final FeedbackService feedbackService;
+    final FeedbackService feedbackService;
 
     @GetMapping("is-logined")
     boolean isLogined() {
@@ -111,7 +111,7 @@ public class MemberController {
 
     @PostMapping("/info/send-email")
     public String sendMail(@AuthenticationPrincipal CustomUserDetails userDetails) throws MessagingException {
-        memberService.sendEmail(userDetails.getMemberEntity().getEmail());
+        memberService.sendEmail(userDetails.getUsername());
         return "인증코드 발송 완료";
     }
 
