@@ -13,10 +13,12 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
     Optional<MemberEntity> findByEmail(String email);
 
+    Optional<MemberEntity> findByUid(long uid);
+
     MemberEntity findByEmailAndIsDeleted(String email, boolean b);
 
     MemberEntity findBySerialNumber(String serialNumber);
 
-    @Query("select p.credit from MemberEntity p where p.uid = :uid")
-    Integer getCreditByUid(@Param("uid") Long uid);
+    @Query("select p.credit from MemberEntity p where p.uid = :uid and p.isDeleted=false")
+    Optional<Integer> getCreditByUid(@Param("uid") Long uid);
 }

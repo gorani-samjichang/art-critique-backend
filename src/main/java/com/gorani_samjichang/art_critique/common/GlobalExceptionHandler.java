@@ -40,4 +40,5 @@ public class GlobalExceptionHandler {
     // Todo: BadFeeedbackRequest
     // Todo: NoPermissionException
     // Todo: CannotFindBySerialNumberException
+    // Todo: UnsupportedEncodingException
 }

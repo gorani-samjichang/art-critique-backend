@@ -6,8 +6,11 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
+import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
+import com.gorani_samjichang.art_critique.member.mail.EmailManager;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,7 +23,6 @@ import oauth.signpost.exception.OAuthMessageSignerException;
 import org.apache.http.client.methods.HttpGet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -42,7 +45,8 @@ public class MemberService {
     final AuthenticationManagerBuilder authenticationManagerBuilder;
     final WebClient.Builder webClientBuilder;
     final CommonUtil commonUtil;
-    private final MemberRepository memberRepository;
+    final MemberRepository memberRepository;
+    final EmailManager emailManager;
 
     @Value("${token.verify.prefix}")
     String prefix;
@@ -103,8 +107,7 @@ public class MemberService {
 
 
     public Integer readCredit(CustomUserDetails userDetails){
-//        return userDetails.memberEntity.getCredit();
-        return memberRepository.getCreditByUid(userDetails.getUid());
+        return memberRepository.getCreditByUid(userDetails.getUid()).orElseThrow(()->new UserNotFoundException("User Not Found"));
     }
 
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
@@ -186,7 +189,7 @@ public class MemberService {
             String level,
             MultipartFile profile
     ) throws IOException {
-        MemberEntity memberEntity = userDetails.getMemberEntity();
+        MemberEntity memberEntity = memberRepository.findById(userDetails.getUid()).orElseThrow(()->new UserNotFoundException("User not found"));
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {
@@ -242,7 +245,10 @@ public class MemberService {
 
     }
 
-    public void tempToken(String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
+    public void tempToken(String email, HttpServletResponse response, HttpServletRequest request,String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+        if(!verifyEmailCheck(request, code)){
+            throw new UserNotValidException("code is incorrect!");
+        }
         if (email.startsWith(prefix)) {
             String [] split = email.split("@");
             if (split[1].equals("google")) {
@@ -269,5 +275,16 @@ public class MemberService {
         }
         String token = jwtUtil.createEmailJwt(email, 60*60*1000L);
         registerCookie("token", token, -1, response);
+    }
+
+    public void sendEmail(String userEmail, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
+        String hashedString = emailManager.sendVerifyingMessage(userEmail);
+        String token=jwtUtil.createEmailJwt(hashedString, 30*30*1000L);
+        registerCookie("token", token, 30*60, response);
+
+    }
+    public boolean verifyEmailCheck(HttpServletRequest request, String code) {
+        String hashedString=emailTokenValidation(request);
+        return emailManager.validCode(code, hashedString);
     }
 }
