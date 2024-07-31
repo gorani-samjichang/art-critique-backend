@@ -42,6 +42,23 @@ spring:
     hibernate:
       ddl-auto: create
     show-sql: true
+    
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: *****@gmail.com
+    password: abcdefgh********
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    auth-code-expiration-millis: 1800000
 ```
 
 5. IDE에서 실행버튼을 누르세요
