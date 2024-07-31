@@ -9,6 +9,7 @@ import com.gorani_samjichang.art_critique.common.JwtUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
+import com.gorani_samjichang.art_critique.member.mail.EmailManager;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,7 +22,6 @@ import oauth.signpost.exception.OAuthMessageSignerException;
 import org.apache.http.client.methods.HttpGet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -44,7 +45,7 @@ public class MemberService {
     final WebClient.Builder webClientBuilder;
     final CommonUtil commonUtil;
     final MemberRepository memberRepository;
-
+    final EmailManager emailManager;
 
     @Value("${token.verify.prefix}")
     String prefix;
@@ -272,11 +273,14 @@ public class MemberService {
         registerCookie("token", token, -1, response);
     }
 
-    public void sendEmail(String userEmail) throws MessagingException {
-        try{
+    public void sendEmail(String userEmail, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
+        emailManager.sendVerifyingMessage(userEmail);
+        String token=jwtUtil.createEmailJwt(userEmail, 30*30*1000L);
+        registerCookie("token", token, -1, response);
 
-        }catch (Exception e){
-            throw new MessagingException("이메일이 유효하지 않거나 메일 서비스가 이용 불가능합니다.");
-        }
+    }
+    public boolean verifyEmailCheck(HttpServletRequest request, String code){
+        String userEmail=emailTokenValidation(request);
+        return emailManager.validCode(code, userEmail);
     }
 }
