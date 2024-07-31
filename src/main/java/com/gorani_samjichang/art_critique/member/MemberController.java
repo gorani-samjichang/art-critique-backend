@@ -3,6 +3,7 @@ package com.gorani_samjichang.art_critique.member;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.feedback.FeedbackService;
@@ -108,8 +109,8 @@ public class MemberController {
 
 
     @GetMapping("/public/temp-token/{email}")
-    void tempToken(@PathVariable String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
-        memberService.tempToken(email, response);
+    void tempToken(@PathVariable String email, HttpServletResponse response, HttpServletRequest request,String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+        memberService.tempToken(email, response, request, code);
     }
 
     @PostMapping("/info/send-email/{email}")

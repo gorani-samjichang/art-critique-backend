@@ -8,6 +8,7 @@ import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
 import com.gorani_samjichang.art_critique.member.mail.EmailManager;
 import jakarta.servlet.http.Cookie;
@@ -244,7 +245,10 @@ public class MemberService {
 
     }
 
-    public void tempToken(String email, HttpServletResponse response) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException {
+    public void tempToken(String email, HttpServletResponse response, HttpServletRequest request,String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+        if(!verifyEmailCheck(request, code)){
+            throw new UserNotValidException("code is incorrect!");
+        }
         if (email.startsWith(prefix)) {
             String [] split = email.split("@");
             if (split[1].equals("google")) {
@@ -274,13 +278,13 @@ public class MemberService {
     }
 
     public void sendEmail(String userEmail, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
-        emailManager.sendVerifyingMessage(userEmail);
-        String token=jwtUtil.createEmailJwt(userEmail, 30*30*1000L);
-        registerCookie("token", token, -1, response);
+        String hashedString = emailManager.sendVerifyingMessage(userEmail);
+        String token=jwtUtil.createEmailJwt(hashedString, 30*30*1000L);
+        registerCookie("token", token, 30*60, response);
 
     }
-    public boolean verifyEmailCheck(HttpServletRequest request, String code){
-        String userEmail=emailTokenValidation(request);
-        return emailManager.validCode(code, userEmail);
+    public boolean verifyEmailCheck(HttpServletRequest request, String code) {
+        String hashedString=emailTokenValidation(request);
+        return emailManager.validCode(code, hashedString);
     }
 }
