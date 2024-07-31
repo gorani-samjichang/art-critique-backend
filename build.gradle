@@ -12,7 +12,11 @@ java {
         languageVersion = JavaLanguageVersion.of(17)
     }
 }
-
+configurations {
+    all {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+}
 repositories {
     mavenCentral()
 }
