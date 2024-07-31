@@ -20,9 +20,8 @@ import java.time.format.DateTimeFormatter;
 public class EmailManager {
 
     private static final int CODE_LENGTH = 8;
-    private CommonUtil commonUtil;
-    @Autowired
-    private JavaMailSender mailSender;
+    final CommonUtil commonUtil;
+    final JavaMailSender mailSender;
     @Value("${jwt.secret}")
     String salt;
 
