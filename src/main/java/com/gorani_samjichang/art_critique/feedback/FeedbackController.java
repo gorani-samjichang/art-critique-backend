@@ -62,7 +62,7 @@ public class FeedbackController {
 
     @GetMapping("/public/retrieve/{serialNumber}")
     public SseEmitter retrieve(@PathVariable String serialNumber) {
-        SseEmitter emitter = new SseEmitter();
+        SseEmitter emitter = new SseEmitter(5*60*1000L);
 
         // threadSafe 한지 아직 알 수 없음
         // 아마 이 원리 그대로 진행 할 것 같음
