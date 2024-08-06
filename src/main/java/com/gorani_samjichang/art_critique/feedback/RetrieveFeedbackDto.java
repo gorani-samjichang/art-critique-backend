@@ -22,4 +22,5 @@ public class RetrieveFeedbackDto {
     private Boolean isBookmarked;
     private List<FeedbackResultDto> feedbackResults;
     private String state;
+    private String tail;
 }

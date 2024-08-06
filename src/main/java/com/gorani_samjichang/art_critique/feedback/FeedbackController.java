@@ -78,40 +78,14 @@ public class FeedbackController {
                     );
                     TimeUnit.MILLISECONDS.sleep(1000);
                     if (feedbackEntity.get().getState().equals("COMPLETED")) {
-                        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
-                                .isBookmarked(feedbackEntity.get().getIsBookmarked())
-                                .version(feedbackEntity.get().getVersion())
-                                .createdAt(feedbackEntity.get().getCreatedAt())
-                                .pictureUrl(feedbackEntity.get().getPictureUrl())
-                                .serialNumber(feedbackEntity.get().getSerialNumber())
-                                .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
-                                .userReview(feedbackEntity.get().getUserReview())
-                                .state(feedbackEntity.get().getState())
-                                .build();
-
-                        List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
-                        for (FeedbackResultEntity e : feedbackEntity.get().getFeedbackResults()) {
-                            FeedbackResultDto resultDto = new FeedbackResultDto();
-                            resultDto.setFeedbackContent(e.getFeedbackContent());
-                            resultDto.setFeedbackType(e.getFeedbackType());
-                            resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
-                            ResultDtoList.add(resultDto);
-                        }
-                        dto.setFeedbackResults(ResultDtoList);
+                        RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
                         emitter.send(SseEmitter.event()
                                 .name("completed")
                                 .data(dto)
                         );
                         break;
                     } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
-                        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
-                                .isBookmarked(feedbackEntity.get().getIsBookmarked())
-                                .version(feedbackEntity.get().getVersion())
-                                .createdAt(feedbackEntity.get().getCreatedAt())
-                                .pictureUrl(feedbackEntity.get().getPictureUrl())
-                                .serialNumber(feedbackEntity.get().getSerialNumber())
-                                .state(feedbackEntity.get().getState())
-                                .build();
+                        RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
 
                         emitter.send(SseEmitter.event()
                                 .name("fail")
@@ -135,26 +109,7 @@ public class FeedbackController {
             HttpServletResponse response) {
         Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
         if (feedbackEntity.isPresent()) {
-            RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
-                    .isBookmarked(feedbackEntity.get().getIsBookmarked())
-                    .version(feedbackEntity.get().getVersion())
-                    .createdAt(feedbackEntity.get().getCreatedAt())
-                    .pictureUrl(feedbackEntity.get().getPictureUrl())
-                    .serialNumber(feedbackEntity.get().getSerialNumber())
-                    .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
-                    .userReview(feedbackEntity.get().getUserReview())
-                    .state(feedbackEntity.get().getState())
-                    .build();
-
-            List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
-            for (FeedbackResultEntity e : feedbackEntity.get().getFeedbackResults()) {
-                FeedbackResultDto resultDto = new FeedbackResultDto();
-                resultDto.setFeedbackContent(e.getFeedbackContent());
-                resultDto.setFeedbackType(e.getFeedbackType());
-                resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
-                ResultDtoList.add(resultDto);
-            }
-            dto.setFeedbackResults(ResultDtoList);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
             return dto;
         } else {
             response.setStatus(402);
@@ -227,7 +182,6 @@ public class FeedbackController {
         }
 
         myMemberEntity.get().setCredit(myMemberEntity.get().getCredit() - 1);
-        usedCredit.useCredit();
         creditRepository.save(usedCredit);
 
         Optional<FeedbackEntity> oldFeedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
@@ -242,13 +196,13 @@ public class FeedbackController {
                 .pictureUrl(imageUrl)
                 .isPublic(oldFeedbackEntity.get().getIsPublic())
                 .isBookmarked(oldFeedbackEntity.get().getIsBookmarked())
-                .tail(oldFeedbackEntity.get().getFid())
+                .tail(oldFeedbackEntity.get().getSerialNumber())
                 .build();
         feedbackRepository.save(newFeedbackEntity);
         myMemberEntity.get().addFeedback(newFeedbackEntity);
         memberRepository.save(myMemberEntity.get());
 
-        String jsonData = "{\"name\": " + "\"" + imageUrl + "\"}";
+        String jsonData = "{\"image_url\": " + "\"" + imageUrl + "\"}";
         webClientBuilder.build()
                 .post()
                 .uri(feedbackServerHost + "/request")
@@ -257,7 +211,6 @@ public class FeedbackController {
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
-                    System.out.println("!!!@@@");
                     usedCredit.refundCredit();
                     newFeedbackEntity.setState(FeedbackState.FAIL);
                     LocalDateTime NOW = LocalDateTime.now();
@@ -301,4 +254,30 @@ public class FeedbackController {
         feedbackService.turnBookmark(serialNumber, userDetails.getUid(), true);
         return true;
     }
+
+    RetrieveFeedbackDto generateRetrieveFeedbackDto(FeedbackEntity feedbackEntity) {
+        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
+                .isBookmarked(feedbackEntity.getIsBookmarked())
+                .version(feedbackEntity.getVersion())
+                .createdAt(feedbackEntity.getCreatedAt())
+                .pictureUrl(feedbackEntity.getPictureUrl())
+                .serialNumber(feedbackEntity.getSerialNumber())
+                .userReviewDetail(feedbackEntity.getUserReviewDetail())
+                .userReview(feedbackEntity.getUserReview())
+                .state(feedbackEntity.getState())
+                .tail(feedbackEntity.getTail())
+                .build();
+
+        List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
+        for (FeedbackResultEntity e : feedbackEntity.getFeedbackResults()) {
+            FeedbackResultDto resultDto = new FeedbackResultDto();
+            resultDto.setFeedbackContent(e.getFeedbackContent());
+            resultDto.setFeedbackType(e.getFeedbackType());
+            resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
+            ResultDtoList.add(resultDto);
+        }
+        dto.setFeedbackResults(ResultDtoList);
+        return dto;
+    }
+
 }

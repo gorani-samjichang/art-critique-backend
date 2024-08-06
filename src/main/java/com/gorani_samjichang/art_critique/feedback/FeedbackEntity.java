@@ -38,7 +38,7 @@ public class FeedbackEntity {
     private String userReviewDetail;
     private Boolean isPublic;
     private Boolean isBookmarked;
-    private Long tail;
+    private String tail;
     private String state; // NOT_STARTED, PENDING, COMPLETED
     private Integer progressRate;
     private Boolean isHead;
