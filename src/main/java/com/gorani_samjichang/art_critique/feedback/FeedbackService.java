@@ -102,7 +102,7 @@ public class FeedbackService {
         feedbackRepository.save(feedbackEntity);
         memberRepository.save(me);
 
-        String jsonData = "{\"name\": " + "\"" + "imageUrl" + "\"}";
+        String jsonData = "{\"image_url\": \"" + imageUrl + "\"}";
         webClientBuilder.build()
                 .post()
                 .uri(feedbackServerHost + "/request")
