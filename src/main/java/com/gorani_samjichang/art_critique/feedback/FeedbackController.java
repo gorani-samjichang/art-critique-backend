@@ -22,13 +22,12 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/feedback")
@@ -76,6 +75,9 @@ public class FeedbackController {
                                     .name("pending")
                                     .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
                     );
+                    // 추후 실제 진행률만 넣도록
+                    feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
+                    feedbackRepository.save(feedbackEntity.get());
                     TimeUnit.MILLISECONDS.sleep(1000);
                     if (feedbackEntity.get().getState().equals("COMPLETED")) {
                         RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
@@ -280,4 +282,25 @@ public class FeedbackController {
         return dto;
     }
 
+
+    @GetMapping("/historyGeneralInfo")
+    public ResponseEntity<HashMap<String, Object>> historyGeneralInfo(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        LocalDate currentTime = LocalDate.now();
+        List<LocalDateTime> feedbackLog = feedbackRepository.getFeedbackLogByUid(userDetails.getUid());
+        Long feedbackAvg = feedbackRepository.getAvgTotalScoreOfFeedbackByUid(userDetails.getUid());
+
+        Map<LocalDate, Long> countByDate = feedbackLog.stream()
+                .collect(Collectors.groupingBy(
+                        date -> date.toLocalDate(),
+                        Collectors.counting()
+                    ));
+
+        HashMap<String, Object> dto = new HashMap<>();
+        dto.put("current", currentTime);
+        dto.put("log", countByDate);
+        dto.put("count", feedbackLog.size());
+        dto.put("avg", feedbackAvg);
+
+        return new ResponseEntity(dto, HttpStatusCode.valueOf(200));
+    }
 }

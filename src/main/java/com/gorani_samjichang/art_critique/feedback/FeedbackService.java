@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -82,7 +83,7 @@ public class FeedbackService {
         }
 
         String serialNumber = UUID.randomUUID().toString();
-        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber + ".jpg");
+        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
         FeedbackEntity feedbackEntity = FeedbackEntity
                 .builder()
                 .serialNumber(serialNumber)

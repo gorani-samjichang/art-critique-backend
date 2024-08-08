@@ -91,6 +91,7 @@ public class MemberService {
     public MemberDto memberEntityToDto(MemberEntity memberEntity) {
         return MemberDto.builder()
                 .email(memberEntity.getEmail())
+                .serialNumber(memberEntity.getSerialNumber())
                 .profile(memberEntity.getProfile())
                 .role(memberEntity.getRole())
                 .level(memberEntity.getLevel())
@@ -216,11 +217,13 @@ public class MemberService {
         if (payload==null){
             throw new UserNotFoundException("Google response payload is null");
         }
+
         email = payload.getEmail();
         JwtInfoVo jwtInfo = getTokenInfo(email);
         if (jwtInfo == null) {
             return false;
         } else {
+            System.out.println("옴!");
             String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7*24*60*60*1000L);
             registerCookie("Authorization", token, -1, response);
             return true;

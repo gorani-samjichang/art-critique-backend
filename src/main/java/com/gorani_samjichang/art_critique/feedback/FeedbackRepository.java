@@ -5,7 +5,9 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.core.parameters.P;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,4 +27,10 @@ public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> 
     String getImageUrlBySerialNumber(@Param("serialNumber") String serialNumber);
 
     Slice<FeedbackEntity> findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(Long uid, Boolean isBookmarked, boolean isHead, Pageable page);
+
+    @Query("select p.createdAt from FeedbackEntity p where p.memberEntity.uid = :uid")
+    List<LocalDateTime> getFeedbackLogByUid(@Param("uid") Long uid);;
+
+    @Query("select avg(p.totalScore) from FeedbackEntity p where p.memberEntity.uid = :uid")
+    Long getAvgTotalScoreOfFeedbackByUid(@Param("uid") Long uid);
 }
