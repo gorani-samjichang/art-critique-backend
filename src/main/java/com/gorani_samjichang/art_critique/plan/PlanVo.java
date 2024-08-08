@@ -13,4 +13,5 @@ public class PlanVo {
     Integer amount;
     Integer totalCost;
     Integer costPerImage;
+    Boolean isHot;
 }

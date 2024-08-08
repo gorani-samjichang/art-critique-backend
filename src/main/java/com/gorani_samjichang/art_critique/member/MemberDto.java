@@ -15,4 +15,5 @@ public class MemberDto {
     private String role;
     private String level;
     private String nickname;
+    private String serialNumber;
 }
