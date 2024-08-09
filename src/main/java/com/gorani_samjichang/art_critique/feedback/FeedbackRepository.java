@@ -28,9 +28,9 @@ public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> 
 
     Slice<FeedbackEntity> findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(Long uid, Boolean isBookmarked, boolean isHead, Pageable page);
 
-    @Query("select p.createdAt from FeedbackEntity p where p.memberEntity.uid = :uid")
+    @Query("select p.createdAt from FeedbackEntity p where p.isHead = true and p.memberEntity.uid = :uid")
     List<LocalDateTime> getFeedbackLogByUid(@Param("uid") Long uid);;
 
-    @Query("select avg(p.totalScore) from FeedbackEntity p where p.memberEntity.uid = :uid")
+    @Query("select avg(p.totalScore) from FeedbackEntity p where p.isHead = true and p.memberEntity.uid = :uid")
     Long getAvgTotalScoreOfFeedbackByUid(@Param("uid") Long uid);
 }

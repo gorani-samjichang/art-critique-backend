@@ -24,6 +24,7 @@ public class FeedbackEntity {
     private Long fid;
     private String serialNumber;
     private String pictureUrl;
+    private String title;
     private Integer totalScore;
     private Integer version;
     private Long inputTokens;
