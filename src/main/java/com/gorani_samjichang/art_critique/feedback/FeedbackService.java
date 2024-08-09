@@ -215,6 +215,7 @@ public class FeedbackService {
                 .serialNumber(feedbackEntity.getSerialNumber())
                 .totalScore(feedbackEntity.getTotalScore())
                 .isSelected(false)
+                .feedbackResults(feedbackEntity.getFeedbackResults())
                 .build();
     }
 }
