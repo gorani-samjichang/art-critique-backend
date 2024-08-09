@@ -21,4 +21,5 @@ public class PastFeedbackDto {
     private Boolean isBookmarked;
     private Boolean isSelected;
     private List<FeedbackResultEntity> feedbackResults;
+    private String state;
 }
