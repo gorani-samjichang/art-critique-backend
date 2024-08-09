@@ -183,7 +183,7 @@ public class FeedbackController {
             return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
         }
 
-        myMemberEntity.get().setCredit(myMemberEntity.get().getCredit() - 1);
+        usedCredit.useCredit();
         creditRepository.save(usedCredit);
 
         Optional<FeedbackEntity> oldFeedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
@@ -236,6 +236,7 @@ public class FeedbackController {
                     myMemberEntity.get().addCreditHistory(historyEntity);
                     newFeedbackEntity.setIsHead(true);
                     oldFeedbackEntity.get().setIsHead(false);
+                    creditUsedHistoryRepository.save(historyEntity);
 
                     feedbackRepository.save(oldFeedbackEntity.get());
                     feedbackRepository.save(newFeedbackEntity);
