@@ -216,6 +216,7 @@ public class FeedbackService {
                 .totalScore(feedbackEntity.getTotalScore())
                 .isSelected(false)
                 .feedbackResults(feedbackEntity.getFeedbackResults())
+                .state(feedbackEntity.getState())
                 .build();
     }
 }
