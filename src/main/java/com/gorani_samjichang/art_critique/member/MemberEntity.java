@@ -31,6 +31,7 @@ public class MemberEntity {
     @Column(columnDefinition = "TEXT")
     private String profile;
     private String level;
+    private Boolean open;
     private LocalDateTime createdAt;
     private String role; // ROLE_USER, ROLE_ADMIN 이정도만 생각하는중 ROLE_을 접두사로 쓰는건 Spring Security 의 정책
     @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)

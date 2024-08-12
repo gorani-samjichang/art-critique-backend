@@ -121,3 +121,57 @@
         return "null";
     }
     */
+
+
+
+//    @GetMapping(value="/public/retrieve/{serialNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+//    public SseEmitter retrieve(@PathVariable String serialNumber) {
+//        SseEmitter emitter = new SseEmitter(2*60*1000L);
+////        emitters.add(emitter);
+//        // threadSafe 한지 아직 알 수 없음
+//        // 아마 이 원리 그대로 진행 할 것 같음
+//        // 프론트가 접속이 끊겨도 내부적으로 데이터베이스에 파이썬의 입력값이 들어와야함 따라서
+//        // 프론트 - 스프링 / 스프링 - 파이썬 은 완전히 별개의 연결이고 파이썬과 스프링의 연결의 결과는 데이터베이스에 반영이되야하고, 스프링과 프론트의 연결은 프론트에 반영되야함
+//        Executors.newSingleThreadExecutor().execute(() -> {
+//            try {
+//                for (int i = 0; i <= 110; i++) {
+//                    Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+//                    emitter.send(SseEmitter.event()
+//                                    .name("pending")
+//                                    .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+//                    );
+//                    // 추후 실제 진행률만 넣도록
+//                    feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
+//                    feedbackRepository.save(feedbackEntity.get());
+//                    TimeUnit.MILLISECONDS.sleep(1000);
+//                    if (feedbackEntity.get().getState().equals("COMPLETED")) {
+//                        RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+//                        emitter.send(SseEmitter.event()
+//                                .name("completed")
+//                                .data(dto)
+//                        );
+//                        break;
+//                    } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
+//                        RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+//
+//                        emitter.send(SseEmitter.event()
+//                                .name("fail")
+//                                .data(dto)
+//                        );
+//                        break;
+//                    }
+//                }
+//                Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+//                RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+//                emitter.send(SseEmitter.event()
+//                        .name("timeout")
+//                        .data(dto)
+//                );
+//                emitter.complete();
+//            }
+//            catch (Exception e) {
+//            }
+//        });
+//        return emitter;
+////        return emitterService.connection(serialNumber, response);
+//    }

@@ -30,7 +30,7 @@ public class FeedbackEntity {
     private Long inputTokens;
     private Long outputTokens;
     private LocalDateTime createdAt;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "uid")
     @JsonBackReference
     private MemberEntity memberEntity;
@@ -57,4 +57,5 @@ public class FeedbackEntity {
         this.feedbackResults.remove(feedbackResultEntity);
         feedbackResultEntity.setFeedbackEntity(null);
     }
+
 }

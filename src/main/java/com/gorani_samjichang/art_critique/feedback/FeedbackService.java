@@ -32,6 +32,7 @@ import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -68,8 +69,8 @@ public class FeedbackService {
             "https://picsum.photos/id/15/240/140"
     };
 
-    String[] getGoodImage() {
-        String[] todayGoodImage = dummyTodayGoodImage;
+    List<FeedbackUrlDto> getGoodImage() {
+        List<FeedbackUrlDto> todayGoodImage = feedbackRepository.findGoodImage();
         return todayGoodImage;
     }
 
@@ -112,6 +113,7 @@ public class FeedbackService {
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
+                    System.out.println("!!!!");
                     usedCredit.refundCredit();
                     feedbackEntity.setState(FeedbackState.FAIL);
                     LocalDateTime NOW = LocalDateTime.now();
@@ -125,6 +127,7 @@ public class FeedbackService {
                         fre.setFeedbackEntity(feedbackEntity);
                     }
                     commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
+                    System.out.println(feedbackEntity.getFid() + " " + feedbackEntity.getState() + " " + pythonResponse.getState());
 
                     LocalDateTime NOW = LocalDateTime.now();
                     feedbackEntity.setCreatedAt(NOW);
@@ -132,11 +135,11 @@ public class FeedbackService {
                     CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
                             .type(usedCredit.getType())
                             .usedDate(NOW)
+                            .memberEntity(me)
                             .feedbackEntity(feedbackEntity)
                             .build();
-                    me.addCreditHistory(historyEntity);
                     creditUsedHistoryRepository.save(historyEntity);
-                    memberRepository.save(me);
+                    feedbackRepository.save(feedbackEntity);
                 })
                 .subscribe();
 
