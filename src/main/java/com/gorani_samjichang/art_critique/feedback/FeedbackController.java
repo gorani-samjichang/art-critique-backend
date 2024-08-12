@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -21,11 +22,14 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -41,13 +45,13 @@ public class FeedbackController {
     final CommonUtil commonUtil;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
     final WebClient.Builder webClientBuilder;
+    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
     final EmitterService emitterService;
 
-
     @GetMapping("/public/good-image")
-    String[] getGoodImage() {
+    List<FeedbackUrlDto> getGoodImage() {
         return feedbackService.getGoodImage();
     }
 
@@ -59,50 +63,74 @@ public class FeedbackController {
         return feedbackService.requestFeedback(imageFile, userDetails);
     }
 
-    @GetMapping("/public/retrieve/{serialNumber}")
+    @GetMapping(value="/public/retrieve/{serialNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter retrieve(@PathVariable String serialNumber) {
-        SseEmitter emitter = new SseEmitter(5*60*1000L);
+        SseEmitter emitter = new SseEmitter(2 * 60 * 1000L);
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-        // threadSafe 한지 아직 알 수 없음
-        // 아마 이 원리 그대로 진행 할 것 같음
-        // 프론트가 접속이 끊겨도 내부적으로 데이터베이스에 파이썬의 입력값이 들어와야함 따라서
-        // 프론트 - 스프링 / 스프링 - 파이썬 은 완전히 별개의 연결이고 파이썬과 스프링의 연결의 결과는 데이터베이스에 반영이되야하고, 스프링과 프론트의 연결은 프론트에 반영되야함
-        Executors.newSingleThreadExecutor().execute(() -> {
+        executor.scheduleAtFixedRate(() -> {
             try {
-                for (int i = 0; i <= 120; i++) {
-                    Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+                // Send data to the client
+                Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+                emitter.send(SseEmitter.event()
+                                .name("pending")
+                                .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                );
+                feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
+                feedbackRepository.save(feedbackEntity.get());
+                if (feedbackEntity.get().getState().equals(FeedbackState.COMPLETED)) {
+                    RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
                     emitter.send(SseEmitter.event()
-                                    .name("pending")
-                                    .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                            .name("completed")
+                            .data(dto)
                     );
-                    // 추후 실제 진행률만 넣도록
-                    feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
-                    feedbackRepository.save(feedbackEntity.get());
-                    TimeUnit.MILLISECONDS.sleep(1000);
-                    if (feedbackEntity.get().getState().equals("COMPLETED")) {
-                        RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
-                        emitter.send(SseEmitter.event()
-                                .name("completed")
-                                .data(dto)
-                        );
-                        break;
-                    } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
-                        RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
-
-                        emitter.send(SseEmitter.event()
-                                .name("fail")
-                                .data(dto)
-                        );
-                        break;
-                    }
+                    emitter.complete();
+                    executor.shutdown();
+                } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
+                    RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+                    emitter.send(SseEmitter.event()
+                            .name("fail")
+                            .data(dto)
+                    );
+                    emitter.complete();
+                    executor.shutdown();
                 }
-                emitter.complete();
-            } catch (IOException | InterruptedException e) {
-
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+                executor.shutdown();
             }
+        }, 0, 1, TimeUnit.SECONDS);
+
+        emitter.onCompletion(executor::shutdown);
+        emitter.onTimeout(() -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            emitter.complete();
+            executor.shutdown();
         });
+        emitter.onError((ex) -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            executor.shutdown();
+        });
+
         return emitter;
-//        return emitterService.connection(serialNumber, response);
     }
 
     @GetMapping("/public/simple-retrieve/{serialNumber}")
@@ -269,8 +297,13 @@ public class FeedbackController {
                 .userReview(feedbackEntity.getUserReview())
                 .state(feedbackEntity.getState())
                 .tail(feedbackEntity.getTail())
+                .totalScore(feedbackEntity.getTotalScore())
+                .memberNickname(feedbackEntity.getMemberEntity().getNickname())
+                .memberProfileUrl(feedbackEntity.getMemberEntity().getProfile())
+                .memberSerialNumber(feedbackEntity.getMemberEntity().getSerialNumber())
                 .build();
 
+        System.out.println(feedbackEntity.getMemberEntity());
         List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
         for (FeedbackResultEntity e : feedbackEntity.getFeedbackResults()) {
             FeedbackResultDto resultDto = new FeedbackResultDto();
@@ -282,7 +315,6 @@ public class FeedbackController {
         dto.setFeedbackResults(ResultDtoList);
         return dto;
     }
-
 
     @GetMapping("/historyGeneralInfo")
     public ResponseEntity<HashMap<String, Object>> historyGeneralInfo(@AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -303,5 +335,11 @@ public class FeedbackController {
         dto.put("avg", feedbackAvg);
 
         return new ResponseEntity(dto, HttpStatusCode.valueOf(200));
+    }
+
+    @GetMapping("/public/allFeedbackedImage/{serialNumber}")
+    public ResponseEntity<List<FeedbackUrlDto>> allFeedbackImage(@PathVariable String serialNumber) {
+        List<FeedbackUrlDto> dto = feedbackRepository.findAllserialNumberAndPictureUrlByMemberEntityUid(serialNumber);
+        return new ResponseEntity<>(dto, HttpStatusCode.valueOf(200));
     }
 }

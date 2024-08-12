@@ -164,6 +164,7 @@ public class MemberService {
                 .nickname(nickname)
                 .isDeleted(false)
                 .serialNumber(serialNumber)
+                .open(true)
                 .role("ROLE_USER")
                 .build();
 
