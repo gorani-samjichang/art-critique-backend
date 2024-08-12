@@ -259,9 +259,9 @@ public class FeedbackController {
                     CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
                             .type(usedCredit.getType())
                             .usedDate(NOW)
+                            .memberEntity(myMemberEntity.get())
                             .feedbackEntity(newFeedbackEntity)
                             .build();
-                    myMemberEntity.get().addCreditHistory(historyEntity);
                     newFeedbackEntity.setIsHead(true);
                     oldFeedbackEntity.get().setIsHead(false);
                     creditUsedHistoryRepository.save(historyEntity);
