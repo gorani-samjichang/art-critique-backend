@@ -327,13 +327,52 @@ public class FeedbackController {
                         date -> date.toLocalDate(),
                         Collectors.counting()
                     ));
-
         HashMap<String, Object> dto = new HashMap<>();
         dto.put("current", currentTime);
         dto.put("log", countByDate);
         dto.put("count", feedbackLog.size());
         dto.put("avg", feedbackAvg);
 
+        List<LocalDate> streakDates = new ArrayList<>(countByDate.keySet());
+        Collections.sort(streakDates);
+        if(streakDates.size()>0){
+            int streakCurrent=-1;
+            int maxStreak=0;
+            LocalDate streakStart=null;
+            LocalDate streakEnd=null;
+            LocalDate previousDate=streakDates.get(0).minusDays(2);
+            for(LocalDate date:streakDates){
+                if(previousDate.plusDays(1).equals(date)) {
+                    streakCurrent++;
+                }else{
+                    if (streakCurrent>=maxStreak){
+                        maxStreak=streakCurrent;
+                        streakEnd=date;
+                        streakStart=date.minusDays(maxStreak-1);
+                    }
+                    streakCurrent=1;
+                }
+                previousDate=date;
+            }
+            LocalDate date=streakDates.get(streakDates.size()-1);
+            if (streakCurrent>=maxStreak){
+                maxStreak=streakCurrent;
+                streakEnd=date;
+                streakStart=date.minusDays(maxStreak-1);
+            }
+            if(!(previousDate.equals(LocalDate.now().minusDays(1))|previousDate.equals(LocalDate.now()))){
+                streakCurrent=0;
+            }
+            dto.put("streakCurrent",streakCurrent);
+            dto.put("maxStreak",maxStreak);
+            dto.put("streakStart",streakStart);
+            dto.put("streakEnd", streakEnd);
+        }else{
+            dto.put("streakCurrent",0);
+            dto.put("maxStreak",0);
+            dto.put("streakStart",null);
+            dto.put("streakEnd",null);
+        }
         return new ResponseEntity(dto, HttpStatusCode.valueOf(200));
     }
 
