@@ -19,6 +19,8 @@ public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> 
 
     Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(Long uid, boolean isHead, Pageable page);
 
+    List<FeedbackEntity> findByMemberEntityUidAndIsHeadAndStateAndCreatedAtAfterOrderByCreatedAtAsc(Long uid, boolean isHead, String state, LocalDateTime date);
+
     @Query("SELECT p FROM FeedbackEntity p WHERE p.isHead = true and p.memberEntity.uid = :uid and p.isBookmarked = true order by p.createdAt desc")
     List<FeedbackEntity> findByUidAndBookmarked(@Param("uid") Long uid);
 
@@ -28,7 +30,7 @@ public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> 
     Slice<FeedbackEntity> findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(Long uid, Boolean isBookmarked, boolean isHead, Pageable page);
 
     @Query("select p.createdAt from FeedbackEntity p where p.isHead = true and p.state='COMPLETED' and p.memberEntity.uid = :uid")
-    List<LocalDateTime> getFeedbackLogByUid(@Param("uid") Long uid);;
+    List<LocalDateTime> getFeedbackLogByUid(@Param("uid") Long uid);
 
     @Query("select avg(p.totalScore) from FeedbackEntity p where p.isHead = true and p.state='COMPLETED' and p.memberEntity.uid = :uid")
     Long getAvgTotalScoreOfFeedbackByUid(@Param("uid") Long uid);
