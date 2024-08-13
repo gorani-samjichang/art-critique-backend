@@ -22,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -63,7 +62,7 @@ public class FeedbackController {
         return feedbackService.requestFeedback(imageFile, userDetails);
     }
 
-    @GetMapping(value="/public/retrieve/{serialNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(value = "/public/retrieve/{serialNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter retrieve(@PathVariable String serialNumber) {
         SseEmitter emitter = new SseEmitter(2 * 60 * 1000L);
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -73,8 +72,8 @@ public class FeedbackController {
                 // Send data to the client
                 Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
                 emitter.send(SseEmitter.event()
-                                .name("pending")
-                                .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                        .name("pending")
+                        .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
                 );
                 feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
                 feedbackRepository.save(feedbackEntity.get());
@@ -273,13 +272,15 @@ public class FeedbackController {
 
         return new ResponseEntity<>(newSerialNumber, HttpStatusCode.valueOf(200));
     }
-// todo: false 반환이 없음.
+
+    // todo: false 반환이 없음.
     @PostMapping("/turn-off-bookmark/{serialNumber}")
     boolean turnOffBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
         feedbackService.turnBookmark(serialNumber, userDetails.getUid(), false);
         return true;
     }
-// todo: false 반환이 없음.
+
+    // todo: false 반환이 없음.
     @PostMapping("/turn-on-bookmark/{serialNumber}")
     boolean turnOnBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
         feedbackService.turnBookmark(serialNumber, userDetails.getUid(), true);
@@ -326,7 +327,7 @@ public class FeedbackController {
                 .collect(Collectors.groupingBy(
                         date -> date.toLocalDate(),
                         Collectors.counting()
-                    ));
+                ));
         HashMap<String, Object> dto = new HashMap<>();
         dto.put("current", currentTime);
         dto.put("log", countByDate);
@@ -335,43 +336,43 @@ public class FeedbackController {
 
         List<LocalDate> streakDates = new ArrayList<>(countByDate.keySet());
         Collections.sort(streakDates);
-        if(streakDates.size()>0){
-            int streakCurrent=-1;
-            int maxStreak=0;
-            LocalDate streakStart=null;
-            LocalDate streakEnd=null;
-            LocalDate previousDate=streakDates.get(0).minusDays(2);
-            for(LocalDate date:streakDates){
-                if(previousDate.plusDays(1).equals(date)) {
+        if (streakDates.size() > 0) {
+            int streakCurrent = -1;
+            int maxStreak = 0;
+            LocalDate streakStart = null;
+            LocalDate streakEnd = null;
+            LocalDate previousDate = streakDates.get(0).minusDays(2);
+            for (LocalDate date : streakDates) {
+                if (previousDate.plusDays(1).equals(date)) {
                     streakCurrent++;
-                }else{
-                    if (streakCurrent>=maxStreak){
-                        maxStreak=streakCurrent;
-                        streakEnd=date;
-                        streakStart=date.minusDays(maxStreak-1);
+                } else {
+                    if (streakCurrent >= maxStreak) {
+                        maxStreak = streakCurrent;
+                        streakEnd = date;
+                        streakStart = date.minusDays(maxStreak - 1);
                     }
-                    streakCurrent=1;
+                    streakCurrent = 1;
                 }
-                previousDate=date;
+                previousDate = date;
             }
-            LocalDate date=streakDates.get(streakDates.size()-1);
-            if (streakCurrent>=maxStreak){
-                maxStreak=streakCurrent;
-                streakEnd=date;
-                streakStart=date.minusDays(maxStreak-1);
+            LocalDate date = streakDates.get(streakDates.size() - 1);
+            if (streakCurrent >= maxStreak) {
+                maxStreak = streakCurrent;
+                streakEnd = date;
+                streakStart = date.minusDays(maxStreak - 1);
             }
-            if(!(previousDate.equals(LocalDate.now().minusDays(1))|previousDate.equals(LocalDate.now()))){
-                streakCurrent=0;
+            if (!(previousDate.equals(LocalDate.now().minusDays(1)) | previousDate.equals(LocalDate.now()))) {
+                streakCurrent = 0;
             }
-            dto.put("streakCurrent",streakCurrent);
-            dto.put("maxStreak",maxStreak);
-            dto.put("streakStart",streakStart);
+            dto.put("streakCurrent", streakCurrent);
+            dto.put("maxStreak", maxStreak);
+            dto.put("streakStart", streakStart);
             dto.put("streakEnd", streakEnd);
-        }else{
-            dto.put("streakCurrent",0);
-            dto.put("maxStreak",0);
-            dto.put("streakStart",null);
-            dto.put("streakEnd",null);
+        } else {
+            dto.put("streakCurrent", 0);
+            dto.put("maxStreak", 0);
+            dto.put("streakStart", null);
+            dto.put("streakEnd", null);
         }
         return new ResponseEntity(dto, HttpStatusCode.valueOf(200));
     }
