@@ -45,7 +45,6 @@ public class MemberController {
             @RequestParam(value = "level", required = false) String level,
             @RequestParam(value = "profile", required = false) MultipartFile profile,
             HttpServletRequest request, HttpServletResponse response) throws IOException {
-
         return memberService.memberJoin(password, nickname, level, profile, request, response);
     }
 
