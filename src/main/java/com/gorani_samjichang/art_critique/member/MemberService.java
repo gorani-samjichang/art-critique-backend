@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -55,7 +54,7 @@ public class MemberService {
     @Value("${twitter.consumer.secret}")
     String twitterSecret;
 
-    public boolean emailCheck(String email, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
+    public boolean emailCheck(String email, HttpServletResponse response) throws MessagingException, UnsupportedEncodingException {
         sendEmail(email, response);
         return memberRepository.existsByEmail(email);
     }
@@ -63,6 +62,7 @@ public class MemberService {
     public boolean nicknameCheck(String nickname) {
         return memberRepository.existsByNickname(nickname);
     }
+
     JwtInfoVo getTokenInfo(String email) {
         MemberEntity me = memberRepository.findByEmailAndIsDeleted(email, false);
         if (me == null) return null;
@@ -108,8 +108,8 @@ public class MemberService {
     }
 
 
-    public Integer readCredit(CustomUserDetails userDetails){
-        return memberRepository.getCreditByUid(userDetails.getUid()).orElseThrow(()->new UserNotFoundException("User Not Found"));
+    public Integer readCredit(CustomUserDetails userDetails) {
+        return memberRepository.getCreditByUid(userDetails.getUid()).orElseThrow(() -> new UserNotFoundException("User Not Found"));
     }
 
     void registerCookie(String key, String token, int maxAge, HttpServletResponse response) throws UnsupportedEncodingException {
@@ -180,7 +180,7 @@ public class MemberService {
         }
         memberRepository.save(memberEntity);
 
-        String token = jwtUtil.createJwt(email, memberEntity.getUid(), serialNumber, memberEntity.getRole(), 7*24*60*60*1000L);
+        String token = jwtUtil.createJwt(email, memberEntity.getUid(), serialNumber, memberEntity.getRole(), 7 * 24 * 60 * 60 * 1000L);
         registerCookie("Authorization", token, -1, response);
 
         return memberEntityToDto(memberEntity);
@@ -192,7 +192,7 @@ public class MemberService {
             String level,
             MultipartFile profile
     ) throws IOException {
-        MemberEntity memberEntity = memberRepository.findById(userDetails.getUid()).orElseThrow(()->new UserNotFoundException("User not found"));
+        MemberEntity memberEntity = memberRepository.findById(userDetails.getUid()).orElseThrow(() -> new UserNotFoundException("User not found"));
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {
@@ -208,14 +208,14 @@ public class MemberService {
 
 
     public boolean oauthGoogleLogin(String idToken, HttpServletResponse response) throws UnsupportedEncodingException {
-        GoogleIdToken.Payload payload =  webClientBuilder.build()
+        GoogleIdToken.Payload payload = webClientBuilder.build()
                 .get()
                 .uri("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=" + idToken)
                 .retrieve()
                 .bodyToMono(GoogleIdToken.Payload.class)
                 .block();
         String email = null;
-        if (payload==null){
+        if (payload == null) {
             throw new UserNotFoundException("Google response payload is null");
         }
 
@@ -225,7 +225,7 @@ public class MemberService {
             return false;
         } else {
             System.out.println("옴!");
-            String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7*24*60*60*1000L);
+            String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7 * 24 * 60 * 60 * 1000L);
             registerCookie("Authorization", token, -1, response);
             return true;
         }
@@ -244,18 +244,15 @@ public class MemberService {
         if (jwtInfo == null) {
             throw new XUserNotFoundException("JwtInfo is null");
         }
-        String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7*24*60*60*1000L);
+        String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7 * 24 * 60 * 60 * 1000L);
         registerCookie("Authorization", token, -1, response);
         return true;
 
     }
 
-    public void tempToken(String email, HttpServletResponse response, HttpServletRequest request,String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
-        if(!verifyEmailCheck(request, code)){
-            throw new UserNotValidException("code is incorrect!");
-        }
+    public void tempToken(String email, HttpServletResponse response, HttpServletRequest request) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
         if (email.startsWith(prefix)) {
-            String [] split = email.split("@");
+            String[] split = email.split("@");
             if (split[1].equals("google")) {
                 GoogleIdToken.Payload payload = webClientBuilder.build()
                         .get()
@@ -278,18 +275,26 @@ public class MemberService {
                 email = firebaseEmail;
             }
         }
-        String token = jwtUtil.createEmailJwt(email, 60*60*1000L);
+        String token = jwtUtil.createEmailJwt(email, 60 * 60 * 1000L);
         registerCookie("token", token, -1, response);
     }
 
-    public void sendEmail(String userEmail, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
+    public void tempToken(String email, HttpServletResponse response, HttpServletRequest request, String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+        if (!verifyEmailCheck(request, code)) {
+            throw new UserNotValidException("code is incorrect!");
+        }
+        tempToken(email, response, request);
+    }
+
+    public void sendEmail(String userEmail, HttpServletResponse response) throws MessagingException, UnsupportedEncodingException {
         String hashedString = emailManager.sendVerifyingMessage(userEmail);
-        String token=jwtUtil.createEmailJwt(hashedString, 30*30*1000L);
-        registerCookie("token", token, 30*60, response);
+        String token = jwtUtil.createEmailJwt(hashedString, 30 * 30 * 1000L);
+        registerCookie("token", token, 30 * 60, response);
 
     }
+
     public boolean verifyEmailCheck(HttpServletRequest request, String code) {
-        String hashedString=emailTokenValidation(request);
+        String hashedString = emailTokenValidation(request);
         return emailManager.validCode(code, hashedString);
     }
 }
