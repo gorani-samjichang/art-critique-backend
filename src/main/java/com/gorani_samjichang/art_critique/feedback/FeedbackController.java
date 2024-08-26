@@ -2,6 +2,7 @@ package com.gorani_samjichang.art_critique.feedback;
 
 import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
+import com.gorani_samjichang.art_critique.common.imageservice.ImageS3Service;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
@@ -45,6 +46,7 @@ public class FeedbackController {
     final BCryptPasswordEncoder bCryptPasswordEncoder;
     final WebClient.Builder webClientBuilder;
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final ImageS3Service imageS3Service;
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
     final EmitterService emitterService;
@@ -216,13 +218,14 @@ public class FeedbackController {
         Optional<FeedbackEntity> oldFeedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
 
         String newSerialNumber = UUID.randomUUID().toString();
-        String imageUrl = oldFeedbackEntity.get().getPictureUrl();
+        String imgSerialNumber = oldFeedbackEntity.get().getPictureUrl();
+        String imageUrl = commonUtil.toImageURL(oldFeedbackEntity.get().getPictureUrl());
         FeedbackEntity newFeedbackEntity = FeedbackEntity
                 .builder()
                 .serialNumber(newSerialNumber)
                 .state("NOT_STARTED")
                 .progressRate(0)
-                .pictureUrl(imageUrl)
+                .pictureUrl(imgSerialNumber)
                 .isPublic(oldFeedbackEntity.get().getIsPublic())
                 .isBookmarked(oldFeedbackEntity.get().getIsBookmarked())
                 .tail(oldFeedbackEntity.get().getSerialNumber())
@@ -380,6 +383,9 @@ public class FeedbackController {
     @GetMapping("/public/allFeedbackedImage/{serialNumber}")
     public ResponseEntity<List<FeedbackUrlDto>> allFeedbackImage(@PathVariable String serialNumber) {
         List<FeedbackUrlDto> dto = feedbackRepository.findAllserialNumberAndPictureUrlByMemberEntityUid(serialNumber);
+        for(FeedbackUrlDto urldto: dto){
+            urldto.setPictureUrl(commonUtil.toImageURL(urldto.getPictureUrl()));
+        }
         return new ResponseEntity<>(dto, HttpStatusCode.valueOf(200));
     }
 }

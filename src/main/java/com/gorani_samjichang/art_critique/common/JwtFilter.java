@@ -37,6 +37,10 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+
+        if (jwtUtil.isExpired(token)){
+
+        }
         String email = jwtUtil.getEmail(token);
         Long uid = jwtUtil.getUid(token);
         String serialNumber = jwtUtil.getSerialNumber(token);

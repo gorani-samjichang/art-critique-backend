@@ -72,6 +72,11 @@ dependencies {
 
     // mail
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    //aws
+    implementation platform('software.amazon.awssdk:bom:2.21.1')
+    implementation 'software.amazon.awssdk:s3' // S3 의존성
+    implementation 'software.amazon.awssdk:sts'
 }
 
 tasks.named('test') {

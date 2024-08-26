@@ -68,6 +68,9 @@ public class FeedbackService {
 
     List<FeedbackUrlDto> getGoodImage() {
         List<FeedbackUrlDto> todayGoodImage = feedbackRepository.findGoodImage();
+        for(FeedbackUrlDto dto : todayGoodImage){
+            dto.setPictureUrl( commonUtil.toImageURL(dto.getPictureUrl()));
+        }
         return todayGoodImage;
     }
 
@@ -81,7 +84,8 @@ public class FeedbackService {
         }
 
         String serialNumber = UUID.randomUUID().toString();
-        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
+        String pictureUUID = UUID.randomUUID().toString();
+        commonUtil.uploadToStorage(imageFile, pictureUUID);
         FeedbackEntity feedbackEntity = FeedbackEntity
                 .builder()
                 .serialNumber(serialNumber)
@@ -89,7 +93,7 @@ public class FeedbackService {
                 .progressRate(0)
                 .isBookmarked(false)
                 .isPublic(true)
-                .pictureUrl(imageUrl)
+                .pictureUrl(pictureUUID)
                 .isHead(true)
                 .tail(null)
                 .build();
@@ -101,6 +105,7 @@ public class FeedbackService {
         feedbackRepository.save(feedbackEntity);
         memberRepository.save(me);
 
+        String imageUrl = commonUtil.toImageURL(pictureUUID);
         String jsonData = "{\"image_url\": " + "\"" + imageUrl + "\"}";
         webClientBuilder.build()
                 .post()
@@ -216,7 +221,7 @@ public class FeedbackService {
         return PastFeedbackDto
                 .builder()
                 .isBookmarked(feedbackEntity.getIsBookmarked())
-                .pictureUrl(feedbackEntity.getPictureUrl())
+                .pictureUrl(commonUtil.toImageURL(feedbackEntity.getPictureUrl()))
                 .createdAt(feedbackEntity.getCreatedAt())
                 .version(feedbackEntity.getVersion())
                 .serialNumber(feedbackEntity.getSerialNumber())

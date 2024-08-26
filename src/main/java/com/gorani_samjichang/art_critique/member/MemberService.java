@@ -92,7 +92,7 @@ public class MemberService {
         return MemberDto.builder()
                 .email(memberEntity.getEmail())
                 .serialNumber(memberEntity.getSerialNumber())
-                .profile(memberEntity.getProfile())
+                .profile(commonUtil.toImageURL(memberEntity.getProfile()))
                 .role(memberEntity.getRole())
                 .level(memberEntity.getLevel())
                 .nickname(memberEntity.getNickname())
@@ -175,8 +175,8 @@ public class MemberService {
         }
         if (level != null) memberEntity.setLevel(level);
         if (profile != null) {
-            String profile_url = commonUtil.uploadToStorage(profile, serialNumber);
-            memberEntity.setProfile(profile_url);
+            commonUtil.uploadToStorage(profile, serialNumber);
+            memberEntity.setProfile(serialNumber);
         }
         memberRepository.save(memberEntity);
 
@@ -196,8 +196,8 @@ public class MemberService {
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {
-            String profile_url = commonUtil.uploadToStorage(profile, memberEntity.getSerialNumber());
-            memberEntity.setProfile(profile_url);
+            commonUtil.uploadToStorage(profile, memberEntity.getSerialNumber());
+            memberEntity.setProfile(memberEntity.getSerialNumber());
         } else {
             memberEntity.setProfile(null);
         }
@@ -224,7 +224,6 @@ public class MemberService {
         if (jwtInfo == null) {
             return false;
         } else {
-            System.out.println("옴!");
             String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7 * 24 * 60 * 60 * 1000L);
             registerCookie("Authorization", token, -1, response);
             return true;
