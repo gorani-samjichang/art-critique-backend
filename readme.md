@@ -1,12 +1,13 @@
 ## 로컬 포팅 메뉴얼 입니다.
 
 1. 해당 파일을 src\main\resources\keystore 디렉터리에 넣어 주세요<br>
-https://drive.google.com/open?id=1Tb7JuHGzdUiCCFJLKPCB9L5twLPFsE0U&usp=drive_fs
-<br><br>
+   https://drive.google.com/open?id=1Tb7JuHGzdUiCCFJLKPCB9L5twLPFsE0U&usp=drive_fs
+   <br><br>
 2. 빌드 완료한 application.yml을 확인하려면 다음 파일을 확인해 주세요<br>
-https://drive.google.com/open?id=1TiF4Q48JLtH2OpWXpe8wdO1B7yVQlX5H&usp=drive_fs
-<br><br>
+   https://drive.google.com/open?id=1TiF4Q48JLtH2OpWXpe8wdO1B7yVQlX5H&usp=drive_fs
+   <br><br>
 3. 루트 폴더에서 src\main\resources\application.yml 파일을 생성하여 다음과 같이 작성해 주세요
+
 ```
 spring.application.name: art_critique
 server:
@@ -30,7 +31,9 @@ twitter:
     key: qeV**************iBr6
     secret: S7z*******************************************t8TN
 ```
+
 4. 자신의 로컬 환경에 맞추어 src\main\resources\application.yml에 내용을 더 추가해 주세요
+
 ```
 spring:
   datasource:
@@ -59,11 +62,24 @@ spring:
           timeout: 5000
           writetimeout: 5000
     auth-code-expiration-millis: 1800000
+    
+aws:
+  accessKeyId: {aws accessKey Id(sts권한 있는 role)}
+  secretAccessKey: {aws accessKey 생성시 쌍으로 나오는 secret key}
+  region: ap-northeast-2
+  s3:
+    bucket: art-critique
+  sts:
+    role-arn: {부여할 권한이 있는 role의 arn. accesskey 받는것과 다른 arn임}
+    session-name: {세션 이름. aws에서 해당 세션으로 처리하는 것을 식별및 추정 가능.}
 ```
 
 5. IDE에서 실행버튼을 누르세요
+
 ---
+
 ## SQLite application.yml
+
 ```yml
 spring.datasource.url: jdbc:sqlite:mydb.db
 spring.datasource.driver-class-name: org.sqlite.JDBC
