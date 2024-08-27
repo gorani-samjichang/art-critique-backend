@@ -92,7 +92,7 @@ public class MemberService {
         return MemberDto.builder()
                 .email(memberEntity.getEmail())
                 .serialNumber(memberEntity.getSerialNumber())
-                .profile(commonUtil.toImageURL(memberEntity.getProfile()))
+                .profile(commonUtil.toProfileImageURL(memberEntity.getProfile()))
                 .role(memberEntity.getRole())
                 .level(memberEntity.getLevel())
                 .nickname(memberEntity.getNickname())
@@ -175,7 +175,7 @@ public class MemberService {
         }
         if (level != null) memberEntity.setLevel(level);
         if (profile != null) {
-            commonUtil.uploadToStorage(profile, serialNumber);
+            commonUtil.uploadToProfileStorage(profile, serialNumber);
             memberEntity.setProfile(serialNumber);
         }
         memberRepository.save(memberEntity);
@@ -196,7 +196,7 @@ public class MemberService {
         memberEntity.setNickname(nickname);
         memberEntity.setLevel(level);
         if (profile != null) {
-            commonUtil.uploadToStorage(profile, memberEntity.getSerialNumber());
+            commonUtil.uploadToProfileStorage(profile, memberEntity.getSerialNumber());
             memberEntity.setProfile(memberEntity.getSerialNumber());
         } else {
             memberEntity.setProfile(null);
