@@ -23,6 +23,11 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String token = null;
         Cookie[] list = request.getCookies();
+        System.out.println("-----쿠키------");
+        for (Cookie c : list) {
+            System.out.println(c.getName() + " : " + c.getValue());
+        }
+        System.out.println("----쿠키 끝----");
         if (list == null) {
             filterChain.doFilter(request, response);
             return;
