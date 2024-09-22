@@ -24,8 +24,10 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = null;
         Cookie[] list = request.getCookies();
         System.out.println("-----쿠키------");
-        for (Cookie c : list) {
-            System.out.println(c.getName() + " : " + c.getValue());
+        if (list != null) {
+            for (Cookie c : list) {
+                System.out.println(c.getName() + " : " + c.getValue());
+            }
         }
         System.out.println("----쿠키 끝----");
         if (list == null) {
