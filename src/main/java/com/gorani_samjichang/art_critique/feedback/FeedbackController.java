@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -22,13 +23,14 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/feedback")
@@ -42,13 +44,13 @@ public class FeedbackController {
     final CommonUtil commonUtil;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
     final WebClient.Builder webClientBuilder;
+    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
     final EmitterService emitterService;
 
-
     @GetMapping("/public/good-image")
-    String[] getGoodImage() {
+    List<FeedbackUrlDto> getGoodImage() {
         return feedbackService.getGoodImage();
     }
 
@@ -60,73 +62,74 @@ public class FeedbackController {
         return feedbackService.requestFeedback(imageFile, userDetails);
     }
 
-    @GetMapping("/public/retrieve/{serialNumber}")
+    @GetMapping(value = "/public/retrieve/{serialNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter retrieve(@PathVariable String serialNumber) {
-        SseEmitter emitter = new SseEmitter();
+        SseEmitter emitter = new SseEmitter(2 * 60 * 1000L);
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-        // threadSafe 한지 아직 알 수 없음
-        // 아마 이 원리 그대로 진행 할 것 같음
-        // 프론트가 접속이 끊겨도 내부적으로 데이터베이스에 파이썬의 입력값이 들어와야함 따라서
-        // 프론트 - 스프링 / 스프링 - 파이썬 은 완전히 별개의 연결이고 파이썬과 스프링의 연결의 결과는 데이터베이스에 반영이되야하고, 스프링과 프론트의 연결은 프론트에 반영되야함
-        Executors.newSingleThreadExecutor().execute(() -> {
+        executor.scheduleAtFixedRate(() -> {
             try {
-                for (int i = 0; i <= 120; i++) {
-                    Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+                // Send data to the client
+                Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+                emitter.send(SseEmitter.event()
+                        .name("pending")
+                        .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                );
+                feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
+                feedbackRepository.save(feedbackEntity.get());
+                if (feedbackEntity.get().getState().equals(FeedbackState.COMPLETED)) {
+                    RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
                     emitter.send(SseEmitter.event()
-                                    .name("pending")
-                                    .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                            .name("completed")
+                            .data(dto)
                     );
-                    TimeUnit.MILLISECONDS.sleep(1000);
-                    if (feedbackEntity.get().getState().equals("COMPLETED")) {
-                        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
-                                .isBookmarked(feedbackEntity.get().getIsBookmarked())
-                                .version(feedbackEntity.get().getVersion())
-                                .createdAt(feedbackEntity.get().getCreatedAt())
-                                .pictureUrl(feedbackEntity.get().getPictureUrl())
-                                .serialNumber(feedbackEntity.get().getSerialNumber())
-                                .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
-                                .userReview(feedbackEntity.get().getUserReview())
-                                .state(feedbackEntity.get().getState())
-                                .build();
-
-                        List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
-                        for (FeedbackResultEntity e : feedbackEntity.get().getFeedbackResults()) {
-                            FeedbackResultDto resultDto = new FeedbackResultDto();
-                            resultDto.setFeedbackContent(e.getFeedbackContent());
-                            resultDto.setFeedbackType(e.getFeedbackType());
-                            resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
-                            ResultDtoList.add(resultDto);
-                        }
-                        dto.setFeedbackResults(ResultDtoList);
-                        emitter.send(SseEmitter.event()
-                                .name("completed")
-                                .data(dto)
-                        );
-                        break;
-                    } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
-                        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
-                                .isBookmarked(feedbackEntity.get().getIsBookmarked())
-                                .version(feedbackEntity.get().getVersion())
-                                .createdAt(feedbackEntity.get().getCreatedAt())
-                                .pictureUrl(feedbackEntity.get().getPictureUrl())
-                                .serialNumber(feedbackEntity.get().getSerialNumber())
-                                .state(feedbackEntity.get().getState())
-                                .build();
-
-                        emitter.send(SseEmitter.event()
-                                .name("fail")
-                                .data(dto)
-                        );
-                        break;
-                    }
+                    emitter.complete();
+                    executor.shutdown();
+                } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
+                    RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+                    emitter.send(SseEmitter.event()
+                            .name("fail")
+                            .data(dto)
+                    );
+                    emitter.complete();
+                    executor.shutdown();
                 }
-                emitter.complete();
-            } catch (IOException | InterruptedException e) {
-
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+                executor.shutdown();
             }
+        }, 0, 1, TimeUnit.SECONDS);
+
+        emitter.onCompletion(executor::shutdown);
+        emitter.onTimeout(() -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            emitter.complete();
+            executor.shutdown();
         });
+        emitter.onError((ex) -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            executor.shutdown();
+        });
+
         return emitter;
-//        return emitterService.connection(serialNumber, response);
     }
 
     @GetMapping("/public/simple-retrieve/{serialNumber}")
@@ -135,26 +138,7 @@ public class FeedbackController {
             HttpServletResponse response) {
         Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
         if (feedbackEntity.isPresent()) {
-            RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
-                    .isBookmarked(feedbackEntity.get().getIsBookmarked())
-                    .version(feedbackEntity.get().getVersion())
-                    .createdAt(feedbackEntity.get().getCreatedAt())
-                    .pictureUrl(feedbackEntity.get().getPictureUrl())
-                    .serialNumber(feedbackEntity.get().getSerialNumber())
-                    .userReviewDetail(feedbackEntity.get().getUserReviewDetail())
-                    .userReview(feedbackEntity.get().getUserReview())
-                    .state(feedbackEntity.get().getState())
-                    .build();
-
-            List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
-            for (FeedbackResultEntity e : feedbackEntity.get().getFeedbackResults()) {
-                FeedbackResultDto resultDto = new FeedbackResultDto();
-                resultDto.setFeedbackContent(e.getFeedbackContent());
-                resultDto.setFeedbackType(e.getFeedbackType());
-                resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
-                ResultDtoList.add(resultDto);
-            }
-            dto.setFeedbackResults(ResultDtoList);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
             return dto;
         } else {
             response.setStatus(402);
@@ -226,7 +210,6 @@ public class FeedbackController {
             return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
         }
 
-        myMemberEntity.get().setCredit(myMemberEntity.get().getCredit() - 1);
         usedCredit.useCredit();
         creditRepository.save(usedCredit);
 
@@ -242,13 +225,13 @@ public class FeedbackController {
                 .pictureUrl(imageUrl)
                 .isPublic(oldFeedbackEntity.get().getIsPublic())
                 .isBookmarked(oldFeedbackEntity.get().getIsBookmarked())
-                .tail(oldFeedbackEntity.get().getFid())
+                .tail(oldFeedbackEntity.get().getSerialNumber())
                 .build();
         feedbackRepository.save(newFeedbackEntity);
         myMemberEntity.get().addFeedback(newFeedbackEntity);
         memberRepository.save(myMemberEntity.get());
 
-        String jsonData = "{\"name\": " + "\"" + imageUrl + "\"}";
+        String jsonData = "{\"image_url\": " + "\"" + imageUrl + "\"}";
         webClientBuilder.build()
                 .post()
                 .uri(feedbackServerHost + "/request")
@@ -257,7 +240,6 @@ public class FeedbackController {
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
-                    System.out.println("!!!@@@");
                     usedCredit.refundCredit();
                     newFeedbackEntity.setState(FeedbackState.FAIL);
                     LocalDateTime NOW = LocalDateTime.now();
@@ -276,11 +258,12 @@ public class FeedbackController {
                     CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
                             .type(usedCredit.getType())
                             .usedDate(NOW)
+                            .memberEntity(myMemberEntity.get())
                             .feedbackEntity(newFeedbackEntity)
                             .build();
-                    myMemberEntity.get().addCreditHistory(historyEntity);
                     newFeedbackEntity.setIsHead(true);
                     oldFeedbackEntity.get().setIsHead(false);
+                    creditUsedHistoryRepository.save(historyEntity);
 
                     feedbackRepository.save(oldFeedbackEntity.get());
                     feedbackRepository.save(newFeedbackEntity);
@@ -289,16 +272,114 @@ public class FeedbackController {
 
         return new ResponseEntity<>(newSerialNumber, HttpStatusCode.valueOf(200));
     }
-// todo: false 반환이 없음.
+
+    // todo: false 반환이 없음.
     @PostMapping("/turn-off-bookmark/{serialNumber}")
     boolean turnOffBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
         feedbackService.turnBookmark(serialNumber, userDetails.getUid(), false);
         return true;
     }
-// todo: false 반환이 없음.
+
+    // todo: false 반환이 없음.
     @PostMapping("/turn-on-bookmark/{serialNumber}")
     boolean turnOnBookMark(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
         feedbackService.turnBookmark(serialNumber, userDetails.getUid(), true);
         return true;
+    }
+
+    RetrieveFeedbackDto generateRetrieveFeedbackDto(FeedbackEntity feedbackEntity) {
+        RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
+                .isBookmarked(feedbackEntity.getIsBookmarked())
+                .version(feedbackEntity.getVersion())
+                .createdAt(feedbackEntity.getCreatedAt())
+                .pictureUrl(feedbackEntity.getPictureUrl())
+                .serialNumber(feedbackEntity.getSerialNumber())
+                .userReviewDetail(feedbackEntity.getUserReviewDetail())
+                .userReview(feedbackEntity.getUserReview())
+                .state(feedbackEntity.getState())
+                .tail(feedbackEntity.getTail())
+                .totalScore(feedbackEntity.getTotalScore())
+                .memberNickname(feedbackEntity.getMemberEntity().getNickname())
+                .memberProfileUrl(feedbackEntity.getMemberEntity().getProfile())
+                .memberSerialNumber(feedbackEntity.getMemberEntity().getSerialNumber())
+                .build();
+
+        System.out.println(feedbackEntity.getMemberEntity());
+        List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
+        for (FeedbackResultEntity e : feedbackEntity.getFeedbackResults()) {
+            FeedbackResultDto resultDto = new FeedbackResultDto();
+            resultDto.setFeedbackContent(e.getFeedbackContent());
+            resultDto.setFeedbackType(e.getFeedbackType());
+            resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
+            ResultDtoList.add(resultDto);
+        }
+        dto.setFeedbackResults(ResultDtoList);
+        return dto;
+    }
+
+    @GetMapping("/historyGeneralInfo")
+    public ResponseEntity<HashMap<String, Object>> historyGeneralInfo(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        LocalDate currentTime = LocalDate.now();
+        List<LocalDateTime> feedbackLog = feedbackRepository.getFeedbackLogByUid(userDetails.getUid());
+        Long feedbackAvg = feedbackRepository.getAvgTotalScoreOfFeedbackByUid(userDetails.getUid());
+
+        Map<LocalDate, Long> countByDate = feedbackLog.stream()
+                .collect(Collectors.groupingBy(
+                        date -> date.toLocalDate(),
+                        Collectors.counting()
+                ));
+        HashMap<String, Object> dto = new HashMap<>();
+        dto.put("current", currentTime);
+        dto.put("log", countByDate);
+        dto.put("count", feedbackLog.size());
+        dto.put("avg", feedbackAvg);
+
+        List<LocalDate> streakDates = new ArrayList<>(countByDate.keySet());
+        Collections.sort(streakDates);
+        if (streakDates.size() > 0) {
+            int streakCurrent = -1;
+            int maxStreak = 0;
+            LocalDate streakStart = null;
+            LocalDate streakEnd = null;
+            LocalDate previousDate = streakDates.get(0).minusDays(2);
+            for (LocalDate date : streakDates) {
+                if (previousDate.plusDays(1).equals(date)) {
+                    streakCurrent++;
+                } else {
+                    if (streakCurrent >= maxStreak) {
+                        maxStreak = streakCurrent;
+                        streakEnd = date;
+                        streakStart = date.minusDays(maxStreak - 1);
+                    }
+                    streakCurrent = 1;
+                }
+                previousDate = date;
+            }
+            LocalDate date = streakDates.get(streakDates.size() - 1);
+            if (streakCurrent >= maxStreak) {
+                maxStreak = streakCurrent;
+                streakEnd = date;
+                streakStart = date.minusDays(maxStreak - 1);
+            }
+            if (!(previousDate.equals(LocalDate.now().minusDays(1)) | previousDate.equals(LocalDate.now()))) {
+                streakCurrent = 0;
+            }
+            dto.put("streakCurrent", streakCurrent);
+            dto.put("maxStreak", maxStreak);
+            dto.put("streakStart", streakStart);
+            dto.put("streakEnd", streakEnd);
+        } else {
+            dto.put("streakCurrent", 0);
+            dto.put("maxStreak", 0);
+            dto.put("streakStart", null);
+            dto.put("streakEnd", null);
+        }
+        return new ResponseEntity(dto, HttpStatusCode.valueOf(200));
+    }
+
+    @GetMapping("/public/allFeedbackedImage/{serialNumber}")
+    public ResponseEntity<List<FeedbackUrlDto>> allFeedbackImage(@PathVariable String serialNumber) {
+        List<FeedbackUrlDto> dto = feedbackRepository.findAllserialNumberAndPictureUrlByMemberEntityUid(serialNumber);
+        return new ResponseEntity<>(dto, HttpStatusCode.valueOf(200));
     }
 }

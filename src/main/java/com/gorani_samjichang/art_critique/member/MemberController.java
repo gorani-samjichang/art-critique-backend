@@ -13,14 +13,13 @@ import lombok.RequiredArgsConstructor;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/member")
@@ -59,7 +58,7 @@ public class MemberController {
     }
 
     @GetMapping("/public/emailCheck/{email}")
-    boolean emailCheck(@PathVariable String email, HttpServletResponse response) throws MessagingException,UnsupportedEncodingException {
+    boolean emailCheck(@PathVariable String email, HttpServletResponse response) throws MessagingException, UnsupportedEncodingException {
         return memberService.emailCheck(email, response);
     }
 
@@ -70,16 +69,18 @@ public class MemberController {
 
     @GetMapping("/info")
     MemberDto info(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return memberService.memberEntityToDto(userDetails.memberEntity);
+        Optional<MemberEntity> myEntity = memberRepository.findById(userDetails.getUid());
+        return memberService.memberEntityToDto(myEntity.get());
     }
 
     @GetMapping("credit")
 //    ResponseEntity<Integer> credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
 //        return new ResponseEntity<>(memberService.readCredit(userDetails), HttpStatus.OK);
 //    }
-   Integer credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    Integer credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return memberService.readCredit(userDetails);
     }
+
     @GetMapping("/public/logout")
     void logout(HttpServletResponse response) {
         memberService.logout(response);
@@ -109,9 +110,13 @@ public class MemberController {
 
 
     @GetMapping("/public/temp-token/{email}/{code}")
-    void tempToken(@PathVariable String email, HttpServletResponse response, HttpServletRequest request,@PathVariable String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+    void tempToken(@PathVariable String email, HttpServletResponse response, HttpServletRequest request, @PathVariable String code) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
         memberService.tempToken(email, response, request, code);
     }
 
+    @GetMapping("/public/temp-token/{email}")
+    void tempToken(@PathVariable String email, HttpServletResponse response, HttpServletRequest request) throws UnsupportedEncodingException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, FirebaseAuthException, UserNotValidException {
+        memberService.tempToken(email, response, request);
+    }
 
 }

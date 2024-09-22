@@ -1,5 +1,6 @@
 package com.gorani_samjichang.art_critique.feedback;
 
+import com.gorani_samjichang.art_critique.member.MemberEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,4 +23,9 @@ public class RetrieveFeedbackDto {
     private Boolean isBookmarked;
     private List<FeedbackResultDto> feedbackResults;
     private String state;
+    private String tail;
+    private Integer totalScore;
+    private String memberNickname;
+    private String memberSerialNumber;
+    private String memberProfileUrl;
 }

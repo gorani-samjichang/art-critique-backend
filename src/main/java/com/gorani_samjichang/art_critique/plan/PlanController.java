@@ -27,14 +27,14 @@ public class PlanController {
     List<PlanVo> subscribePlans = new ArrayList<>();
     @PostConstruct
     void init() {
-        prepaymentPlans.add(PlanVo.builder().amount(5).totalCost(6524).costPerImage(624).build());
-        prepaymentPlans.add(PlanVo.builder().amount(10).totalCost(7524).costPerImage(614).build());
-        prepaymentPlans.add(PlanVo.builder().amount(15).totalCost(8524).costPerImage(604).build());
-        prepaymentPlans.add(PlanVo.builder().amount(20).totalCost(9524).costPerImage(594).build());
+        prepaymentPlans.add(PlanVo.builder().amount(5).totalCost(6524).costPerImage(624).isHot(false).build());
+        prepaymentPlans.add(PlanVo.builder().amount(10).totalCost(7524).costPerImage(614).isHot(true).build());
+        prepaymentPlans.add(PlanVo.builder().amount(15).totalCost(8524).costPerImage(604).isHot(false).build());
+        prepaymentPlans.add(PlanVo.builder().amount(20).totalCost(9524).costPerImage(594).isHot(false).build());
 
-        subscribePlans.add(PlanVo.builder().amount(5).totalCost(6524).costPerImage(624).build());
-        subscribePlans.add(PlanVo.builder().amount(10).totalCost(7524).costPerImage(614).build());
-        subscribePlans.add(PlanVo.builder().amount(15).totalCost(8524).costPerImage(604).build());
+        subscribePlans.add(PlanVo.builder().amount(5).totalCost(6524).costPerImage(624).isHot(false).build());
+        subscribePlans.add(PlanVo.builder().amount(10).totalCost(7524).costPerImage(614).isHot(false).build());
+        subscribePlans.add(PlanVo.builder().amount(15).totalCost(8524).costPerImage(604).isHot(true).build());
     }
 
     @GetMapping("/public/list")
@@ -98,7 +98,6 @@ public class PlanController {
         return new ResponseEntity<>(HttpStatusCode.valueOf(200));
     }
 
-    private boolean isPaymentSuccess() {
-        return true;
+    private boolean isPaymentSuccess() {return true;
     }
 }

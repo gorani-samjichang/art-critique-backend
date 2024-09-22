@@ -2,6 +2,7 @@ package com.gorani_samjichang.art_critique;
 
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
+import com.gorani_samjichang.art_critique.feedback.FeedbackEntity;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class TestController {
     @PostConstruct
     void makeMember() {
 
-        MemberEntity me = MemberEntity.builder().email("aa@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).serialNumber("efe1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("ggggg").role("ROLE_USER").isDeleted(false).build();
+        MemberEntity me = MemberEntity.builder().email("aa@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).open(true).serialNumber("efe1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("ggggg").role("ROLE_USER").isDeleted(false).build();
         memberRepository.save(me);
         CreditEntity c1 = CreditEntity.builder().memberEntity(me).state("VALID").purchaseDate(LocalDateTime.now().minusMinutes(5)).expireDate(LocalDateTime.now().plusMonths(2).minusMinutes(5)).type("PREPAYMENT").remainAmount(2).purchaseAmount(2).usedAmount(0).build();
         me.addCredit(c1);
@@ -36,7 +37,7 @@ public class TestController {
         memberRepository.save(me);
 
 
-        MemberEntity admin = MemberEntity.builder().email("admin@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).serialNumber("e22e1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("admin").role("ROLE_ADMIN").isDeleted(false).build();
+        MemberEntity admin = MemberEntity.builder().email("admin@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).open(true).serialNumber("e22e1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("admin").role("ROLE_ADMIN").isDeleted(false).build();
         memberRepository.save(admin);
         CreditEntity c2 = CreditEntity.builder().memberEntity(me).state("VALID").purchaseDate(LocalDateTime.now().minusMinutes(5)).expireDate(LocalDateTime.now().plusMonths(2).minusMinutes(5)).type("PREPAYMENT").remainAmount(2).purchaseAmount(2).usedAmount(0).build();
         admin.addCredit(c2);

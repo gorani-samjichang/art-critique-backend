@@ -2,7 +2,10 @@ package com.gorani_samjichang.art_critique.feedback;
 
 import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
-import com.gorani_samjichang.art_critique.common.exceptions.*;
+import com.gorani_samjichang.art_critique.common.exceptions.BadFeedbackRequestException;
+import com.gorani_samjichang.art_critique.common.exceptions.CannotFindBySerialNumberException;
+import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
@@ -15,20 +18,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.net.http.HttpResponse;
-import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -67,8 +66,8 @@ public class FeedbackService {
             "https://picsum.photos/id/15/240/140"
     };
 
-    String[] getGoodImage() {
-        String[] todayGoodImage = dummyTodayGoodImage;
+    List<FeedbackUrlDto> getGoodImage() {
+        List<FeedbackUrlDto> todayGoodImage = feedbackRepository.findGoodImage();
         return todayGoodImage;
     }
 
@@ -111,6 +110,7 @@ public class FeedbackService {
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
+                    System.out.println("!!!!");
                     usedCredit.refundCredit();
                     feedbackEntity.setState(FeedbackState.FAIL);
                     LocalDateTime NOW = LocalDateTime.now();
@@ -124,6 +124,7 @@ public class FeedbackService {
                         fre.setFeedbackEntity(feedbackEntity);
                     }
                     commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
+                    System.out.println(feedbackEntity.getFid() + " " + feedbackEntity.getState() + " " + pythonResponse.getState());
 
                     LocalDateTime NOW = LocalDateTime.now();
                     feedbackEntity.setCreatedAt(NOW);
@@ -131,11 +132,11 @@ public class FeedbackService {
                     CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
                             .type(usedCredit.getType())
                             .usedDate(NOW)
+                            .memberEntity(me)
                             .feedbackEntity(feedbackEntity)
                             .build();
-                    me.addCreditHistory(historyEntity);
                     creditUsedHistoryRepository.save(historyEntity);
-                    memberRepository.save(me);
+                    feedbackRepository.save(feedbackEntity);
                 })
                 .subscribe();
 
@@ -168,8 +169,8 @@ public class FeedbackService {
     }
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(uid, true, pageable);
+        LocalDateTime oneYearAgo = LocalDateTime.now().minus(1, ChronoUnit.YEARS);
+        List<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateAndCreatedAtAfterOrderByCreatedAtAsc(uid, true, "COMPLETED", oneYearAgo);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
@@ -192,7 +193,14 @@ public class FeedbackService {
             feedbackDtos.add(convertFeedbackEntityToDto(f));
         }
         return feedbackDtos;
+    }
 
+    public List<PastFeedbackDto> convertFeedbackEntityToDto(List<FeedbackEntity> feedbackEntities) {
+        List<PastFeedbackDto> feedbackDtos = new ArrayList<>();
+        for (FeedbackEntity f : feedbackEntities) {
+            feedbackDtos.add(convertFeedbackEntityToDto(f));
+        }
+        return feedbackDtos;
     }
 
     public void turnBookmark(String serialNumber, long uid, boolean target) {
@@ -214,6 +222,8 @@ public class FeedbackService {
                 .serialNumber(feedbackEntity.getSerialNumber())
                 .totalScore(feedbackEntity.getTotalScore())
                 .isSelected(false)
+                .feedbackResults(feedbackEntity.getFeedbackResults())
+                .state(feedbackEntity.getState())
                 .build();
     }
 }

@@ -24,12 +24,13 @@ public class FeedbackEntity {
     private Long fid;
     private String serialNumber;
     private String pictureUrl;
+    private String title;
     private Integer totalScore;
     private Integer version;
     private Long inputTokens;
     private Long outputTokens;
     private LocalDateTime createdAt;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "uid")
     @JsonBackReference
     private MemberEntity memberEntity;
@@ -38,7 +39,7 @@ public class FeedbackEntity {
     private String userReviewDetail;
     private Boolean isPublic;
     private Boolean isBookmarked;
-    private Long tail;
+    private String tail;
     private String state; // NOT_STARTED, PENDING, COMPLETED
     private Integer progressRate;
     private Boolean isHead;
@@ -56,4 +57,5 @@ public class FeedbackEntity {
         this.feedbackResults.remove(feedbackResultEntity);
         feedbackResultEntity.setFeedbackEntity(null);
     }
+
 }

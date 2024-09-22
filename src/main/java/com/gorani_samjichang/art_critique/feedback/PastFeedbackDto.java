@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Builder
 @Getter
@@ -19,4 +20,6 @@ public class PastFeedbackDto {
     private LocalDateTime createdAt;
     private Boolean isBookmarked;
     private Boolean isSelected;
+    private List<FeedbackResultEntity> feedbackResults;
+    private String state;
 }
