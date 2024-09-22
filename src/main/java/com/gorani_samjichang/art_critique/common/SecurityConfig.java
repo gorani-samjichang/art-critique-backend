@@ -50,7 +50,7 @@ public class SecurityConfig {
                                 CorsConfiguration configuration = new CorsConfiguration();
 //                                configuration.setAllowedOrigins(Collections.singletonList(frontHost));
 //                                configuration.setAllowedOrigins(Collections.singletonList("http://localhost:9100"));
-                                configuration.setAllowedOrigins(Arrays.asList(frontHost, "http://localhost:9100"));
+                                configuration.setAllowedOrigins(Arrays.asList(frontHost, "http://localhost:9100", "http://artcritique.kro.kr"));
                                 configuration.setAllowedMethods(Collections.singletonList("*"));
                                 configuration.setAllowCredentials(true);
                                 configuration.setAllowedHeaders(Collections.singletonList("*"));
