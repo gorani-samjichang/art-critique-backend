@@ -31,15 +31,18 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     }
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        System.out.println("1111");
         String email = obtainUsername(request);
         String password = obtainPassword(request);
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(email, password, null);
+        System.out.println("2222");
         return authenticationManager.authenticate(authToken);
     }
 
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+        System.out.println("3333");
         CustomUserDetails customUserDetails = (CustomUserDetails) authResult.getPrincipal();
         String email = customUserDetails.getUsername();
         Long uid = customUserDetails.getUid();
@@ -59,6 +62,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
+        System.out.println("4444");
     }
 
     @Override
