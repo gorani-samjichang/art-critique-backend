@@ -57,9 +57,9 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String token = jwtUtil.createJwt(email, uid, sn, role, 7*24*60*60*1000L);
         String encodedValue = URLEncoder.encode( token, "UTF-8" );
         Cookie cookie = new Cookie( "Authorization", encodedValue);
-        cookie.setMaxAge(24 * 60 * 60);
-        cookie.setSecure(true);
-        cookie.setHttpOnly(true);
+        cookie.setMaxAge(7 * 24 * 60 * 60);
+//        cookie.setSecure(true);
+//        cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
         System.out.println("4444");
