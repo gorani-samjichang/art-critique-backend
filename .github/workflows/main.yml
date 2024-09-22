@@ -20,7 +20,7 @@ jobs:
 
       - name: Set FIREBASE
         run: |
-          mkdir -p src/main/resources
+          mkdir -p src/main/resources/keystore
           echo "${{ secrets.SECRET_FIREBASE }}" | base64 --decode > src/main/resources/keystore/art-critique-firebase-adminsdk-yiwby-e882eac9b9.json
           find src
 
