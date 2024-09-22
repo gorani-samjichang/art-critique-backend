@@ -29,6 +29,7 @@ public class CommonUtil {
     }
 
     public String uploadToStorage(MultipartFile file, String fileName) throws IOException {
+        fileName = fileName + ".jpg";
         Bucket bucket = StorageClient.getInstance().bucket();
         InputStream content = new ByteArrayInputStream(file.getBytes());
         bucket.create(fileName, content, file.getContentType());
