@@ -57,7 +57,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String encodedValue = URLEncoder.encode( token, "UTF-8" );
         Cookie cookie = new Cookie( "Authorization", encodedValue);
         cookie.setMaxAge(-1);
-        cookie.setSecure(true);
+//        cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
