@@ -36,12 +36,15 @@ public class MemberEntity {
     private String role; // ROLE_USER, ROLE_ADMIN 이정도만 생각하는중 ROLE_을 접두사로 쓰는건 Spring Security 의 정책
     @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
     @JsonManagedReference
+    @Builder.Default
     private List<FeedbackEntity> feedbacks = new ArrayList<>();
     @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
     @JsonManagedReference
+    @Builder.Default
     private List<CreditEntity> credits = new ArrayList<>();
     @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = false)
     @JsonManagedReference
+    @Builder.Default
     private List<CreditUsedHistoryEntity> creditHistorys = new ArrayList<>();
 
     public void addFeedback(FeedbackEntity feedbackEntity) {
