@@ -219,13 +219,13 @@ public class FeedbackController {
 
         String newSerialNumber = UUID.randomUUID().toString();
         String imgSerialNumber = oldFeedbackEntity.get().getPictureUrl();
-        String imageUrl = commonUtil.toImageURL(oldFeedbackEntity.get().getPictureUrl());
+        String imageUrl = commonUtil.toFeedbackImageURL(imgSerialNumber);
         FeedbackEntity newFeedbackEntity = FeedbackEntity
                 .builder()
                 .serialNumber(newSerialNumber)
                 .state("NOT_STARTED")
                 .progressRate(0)
-                .pictureUrl(imgSerialNumber)
+                .pictureUrl(imageUrl)
                 .isPublic(oldFeedbackEntity.get().getIsPublic())
                 .isBookmarked(oldFeedbackEntity.get().getIsBookmarked())
                 .tail(oldFeedbackEntity.get().getSerialNumber())
@@ -295,7 +295,7 @@ public class FeedbackController {
                 .isBookmarked(feedbackEntity.getIsBookmarked())
                 .version(feedbackEntity.getVersion())
                 .createdAt(feedbackEntity.getCreatedAt())
-                .pictureUrl(feedbackEntity.getPictureUrl())
+                .pictureUrl(commonUtil.toFeedbackImageURL(feedbackEntity.getPictureUrl()))
                 .serialNumber(feedbackEntity.getSerialNumber())
                 .userReviewDetail(feedbackEntity.getUserReviewDetail())
                 .userReview(feedbackEntity.getUserReview())
@@ -307,7 +307,6 @@ public class FeedbackController {
                 .memberSerialNumber(feedbackEntity.getMemberEntity().getSerialNumber())
                 .build();
 
-        System.out.println(feedbackEntity.getMemberEntity());
         List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
         for (FeedbackResultEntity e : feedbackEntity.getFeedbackResults()) {
             FeedbackResultDto resultDto = new FeedbackResultDto();
@@ -383,8 +382,8 @@ public class FeedbackController {
     @GetMapping("/public/allFeedbackedImage/{serialNumber}")
     public ResponseEntity<List<FeedbackUrlDto>> allFeedbackImage(@PathVariable String serialNumber) {
         List<FeedbackUrlDto> dto = feedbackRepository.findAllserialNumberAndPictureUrlByMemberEntityUid(serialNumber);
-        for(FeedbackUrlDto urldto: dto){
-            urldto.setPictureUrl(commonUtil.toImageURL(urldto.getPictureUrl()));
+        for (FeedbackUrlDto urldto : dto) {
+            urldto.setPictureUrl(commonUtil.toFeedbackImageURL(urldto.getPictureUrl()));
         }
         return new ResponseEntity<>(dto, HttpStatusCode.valueOf(200));
     }

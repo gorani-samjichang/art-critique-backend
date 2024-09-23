@@ -34,20 +34,24 @@ public class CommonUtil {
         return sb.toString();
     }
 
-    public String uploadToStorage(MultipartFile file, String fileName) throws IOException {
-//        fileName = fileName + ".jpg";
-//        Bucket bucket = StorageClient.getInstance().bucket();
-//        InputStream content = new ByteArrayInputStream(file.getBytes());
-//        bucket.create(fileName, content, file.getContentType());
-//        return "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/" + fileName + "?alt=media&token=";
+    public String uploadToProfileStorage(MultipartFile file, String fileName) throws IOException {
         return imageS3Service.upload(file, fileName, S3Paths.PROFILE);
     }
+    public String uploadToFeedbackStorage(MultipartFile file, String fileName) throws IOException {
+        return imageS3Service.upload(file, fileName, S3Paths.FEEDBACK_IMAGE);
+    }
 
-    public String toImageURL(String serialNumber){
+    public String toProfileImageURL(String serialNumber){
         if (serialNumber==null){
             return null;
         }
         return imageS3Service.generatePreSignedURL(serialNumber, S3Paths.PROFILE);
+    }
+    public String toFeedbackImageURL(String serialNumber){
+        if (serialNumber==null){
+            return null;
+        }
+        return imageS3Service.generatePreSignedURL(serialNumber, S3Paths.FEEDBACK_IMAGE);
     }
 
     public <T> void copyNonNullProperties(T source, T target) {

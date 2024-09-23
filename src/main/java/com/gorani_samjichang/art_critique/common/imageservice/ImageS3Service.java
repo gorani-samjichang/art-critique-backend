@@ -63,7 +63,6 @@ public class ImageS3Service {
 
     @Scheduled(initialDelay = 0, fixedRate = 3550000)
     void prepareS3Client() {
-        System.out.println("prepareS3Client" + " at " + LocalDateTime.now());
         Credentials credentials = getAssumeRoleCredentials();
         AwsSessionCredentials awsCredentials = AwsSessionCredentials.create(credentials.accessKeyId(), credentials.secretAccessKey(), credentials.sessionToken());
         s3Client = S3Client.builder()
@@ -73,6 +72,7 @@ public class ImageS3Service {
 
     }
 
+    // todo: upload시 profile과 feedbackimage path의 분리하도록
     public String upload(MultipartFile file, String filename, S3Paths s3Paths) throws IOException, S3Exception {
         Path tempFile = Files.createTempFile("upload-", filename);
         file.transferTo(tempFile.toFile());
@@ -96,7 +96,6 @@ public class ImageS3Service {
 
     @Scheduled(initialDelay = 1, fixedRate = 3550000)
     private void prepareS3Presigner() {
-        System.out.println("prepareS3Presigner" + " at " + LocalDateTime.now());
 
         Credentials credentials = getAssumeRoleCredentials();
         AwsSessionCredentials awsCredentials = AwsSessionCredentials.create(
@@ -110,9 +109,9 @@ public class ImageS3Service {
                 .build();
     }
 
+    // todo : 생성시 path 다르게 적용할것.
     public String generatePreSignedURL(String serialNumber, S3Paths s3Paths) {
         String key = s3Paths.getPath() + serialNumber + ".jpg";
-        System.out.println("key:" + key);
         GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucketName).key(key).build();
         GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofMinutes(10))  // URL 유효 시간 설정
@@ -120,7 +119,6 @@ public class ImageS3Service {
                 .build();
         PresignedGetObjectRequest presignedGetObjectRequest = s3Presigner.presignGetObject(getObjectPresignRequest);
         String url = presignedGetObjectRequest.url().toString();
-        System.out.println("generated: " + url + " at " + LocalDateTime.now());
         return url;
     }
 }

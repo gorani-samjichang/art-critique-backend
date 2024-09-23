@@ -68,8 +68,8 @@ public class FeedbackService {
 
     List<FeedbackUrlDto> getGoodImage() {
         List<FeedbackUrlDto> todayGoodImage = feedbackRepository.findGoodImage();
-        for(FeedbackUrlDto dto : todayGoodImage){
-            dto.setPictureUrl( commonUtil.toImageURL(dto.getPictureUrl()));
+        for (FeedbackUrlDto dto : todayGoodImage) {
+            dto.setPictureUrl(commonUtil.toFeedbackImageURL(dto.getPictureUrl()));
         }
         return todayGoodImage;
     }
@@ -85,7 +85,7 @@ public class FeedbackService {
 
         String serialNumber = UUID.randomUUID().toString();
         String pictureUUID = UUID.randomUUID().toString();
-        commonUtil.uploadToStorage(imageFile, pictureUUID);
+        commonUtil.uploadToFeedbackStorage(imageFile, pictureUUID);
         FeedbackEntity feedbackEntity = FeedbackEntity
                 .builder()
                 .serialNumber(serialNumber)
@@ -105,7 +105,7 @@ public class FeedbackService {
         feedbackRepository.save(feedbackEntity);
         memberRepository.save(me);
 
-        String imageUrl = commonUtil.toImageURL(pictureUUID);
+        String imageUrl = commonUtil.toFeedbackImageURL(pictureUUID);
         String jsonData = "{\"image_url\": " + "\"" + imageUrl + "\"}";
         webClientBuilder.build()
                 .post()
@@ -181,13 +181,13 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid,true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true,true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true, true, pageable);
 
         return convertFeedbackEntityToDto(feedbackEntities);
     }
@@ -221,7 +221,7 @@ public class FeedbackService {
         return PastFeedbackDto
                 .builder()
                 .isBookmarked(feedbackEntity.getIsBookmarked())
-                .pictureUrl(commonUtil.toImageURL(feedbackEntity.getPictureUrl()))
+                .pictureUrl(commonUtil.toFeedbackImageURL(feedbackEntity.getPictureUrl()))
                 .createdAt(feedbackEntity.getCreatedAt())
                 .version(feedbackEntity.getVersion())
                 .serialNumber(feedbackEntity.getSerialNumber())
