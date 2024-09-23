@@ -31,6 +31,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     }
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        // 쿠키를 일단 지우고 시작하면 될 듯
+
         String email = obtainUsername(request);
         String password = obtainPassword(request);
 

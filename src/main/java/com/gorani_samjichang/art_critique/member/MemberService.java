@@ -102,7 +102,7 @@ public class MemberService {
     public void logout(HttpServletResponse response) {
         Cookie myCookie = new Cookie("Authorization", null);  // 쿠키 값을 null로 설정
         myCookie.setPath("/");
-        myCookie.setHttpOnly(true);
+//        myCookie.setHttpOnly(true);
         myCookie.setMaxAge(0);  // 남은 만료시간을 0으로 설정
         response.addCookie(myCookie);
     }
