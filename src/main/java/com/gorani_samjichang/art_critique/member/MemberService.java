@@ -117,7 +117,7 @@ public class MemberService {
         Cookie cookie = new Cookie(key, encodedValue);
         cookie.setMaxAge(maxAge);
 //        cookie.setSecure(true);
-        cookie.setHttpOnly(true);
+//        cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
     }
