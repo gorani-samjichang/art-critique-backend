@@ -22,7 +22,7 @@
  # 디렉터리가 존재하지 않으면 생성
  if [ ! -d "$DIRECTORY" ]; then
      mkdir "$DIRECTORY"
-
+ fi
  nohup java -jar -Duser.timezone=Asia/Seoul $JAR_NAME 1>nohup/stdout.txt 2>nohup/stderr.txt &
  sleep 2
 
