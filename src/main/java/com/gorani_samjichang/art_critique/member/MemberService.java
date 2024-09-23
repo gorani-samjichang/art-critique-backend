@@ -116,7 +116,7 @@ public class MemberService {
         String encodedValue = URLEncoder.encode(token, "UTF-8");
         Cookie cookie = new Cookie(key, encodedValue);
         cookie.setMaxAge(maxAge);
-        cookie.setSecure(true);
+//        cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
