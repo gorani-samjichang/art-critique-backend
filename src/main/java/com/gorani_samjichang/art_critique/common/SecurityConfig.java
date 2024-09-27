@@ -27,6 +27,8 @@ import java.util.Collections;
 public class SecurityConfig {
     @Value("${front.server.host}")
     String frontHost;
+    @Value("${front.server.host.cname}")
+    String frontHostCname;
     final AuthenticationConfiguration authenticationConfiguration;
     final JwtUtil jwtUtil;
     @Bean
@@ -50,7 +52,7 @@ public class SecurityConfig {
                                 CorsConfiguration configuration = new CorsConfiguration();
 //                                configuration.setAllowedOrigins(Collections.singletonList(frontHost));
 //                                configuration.setAllowedOrigins(Collections.singletonList("http://localhost:9100"));
-                                configuration.setAllowedOrigins(Arrays.asList(frontHost, "http://localhost:9100"));
+                                configuration.setAllowedOrigins(Arrays.asList(frontHost, frontHostCname, "http://localhost:9100"));
                                 configuration.setAllowedMethods(Collections.singletonList("*"));
                                 configuration.setAllowCredentials(true);
                                 configuration.setAllowedHeaders(Collections.singletonList("*"));

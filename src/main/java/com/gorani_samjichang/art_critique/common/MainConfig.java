@@ -11,6 +11,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class MainConfig implements WebMvcConfigurer {
     @Value("${front.server.host}")
     String frontHost;
+    @Value("${front.server.host.cname}")
+    String frontHostCname;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -18,7 +20,7 @@ public class MainConfig implements WebMvcConfigurer {
         // 모든 경로에 대해 모든 HTTP 메서드에 대한 CORS를 허용
         registry.addMapping("/**")
 //                .allowedOrigins("http://localhost:9100")
-                .allowedOrigins(frontHost, "http://localhost:9100")
+                .allowedOrigins(frontHost, frontHostCname, "http://localhost:9100")
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowCredentials(true)
                 .allowedHeaders("*");
