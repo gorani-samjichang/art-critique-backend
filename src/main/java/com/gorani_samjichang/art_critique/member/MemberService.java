@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserInfo;
 import com.google.firebase.auth.UserRecord;
+import com.gorani_samjichang.art_critique.appConstant.ExpireTime;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
@@ -103,7 +104,7 @@ public class MemberService {
     public void logout(HttpServletResponse response) {
         Cookie myCookie = new Cookie("Authorization", null);  // 쿠키 값을 null로 설정
         myCookie.setPath("/");
-//        myCookie.setHttpOnly(true);
+        myCookie.setHttpOnly(true);
         myCookie.setMaxAge(0);  // 남은 만료시간을 0으로 설정
         response.addCookie(myCookie);
     }
@@ -225,7 +226,7 @@ public class MemberService {
         if (jwtInfo == null) {
             return false;
         } else {
-            String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7 * 24 * 60 * 60 * 1000L);
+            String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), ExpireTime.ACCESS_TOKEN);
             registerCookie("Authorization", token, -1, response);
             return true;
         }
@@ -245,7 +246,7 @@ public class MemberService {
         if (jwtInfo == null) {
             throw new XUserNotFoundException("Need to Join");
         }
-        String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7 * 24 * 60 * 60 * 1000L);
+        String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), ExpireTime.ACCESS_TOKEN);
         registerCookie("Authorization", token, -1, response);
         return true;
 
@@ -276,7 +277,7 @@ public class MemberService {
                 email = firebaseEmail;
             }
         }
-        String token = jwtUtil.createEmailJwt(email, 60 * 60 * 1000L);
+        String token = jwtUtil.createEmailJwt(email, ExpireTime.OAUTH_TOKEN);
         registerCookie("token", token, -1, response);
     }
 
