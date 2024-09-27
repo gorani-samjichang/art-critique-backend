@@ -37,25 +37,32 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        String email = jwtUtil.getEmail(token);
-        Long uid = jwtUtil.getUid(token);
-        String serialNumber = jwtUtil.getSerialNumber(token);
-        String role = jwtUtil.getRole(token);
+        try {
+            String email = jwtUtil.getEmail(token);
+            Long uid = jwtUtil.getUid(token);
+            String serialNumber = jwtUtil.getSerialNumber(token);
+            String role = jwtUtil.getRole(token);
 
-        MemberEntity memberEntity = MemberEntity.builder()
-                .email(email)
-                .uid(uid)
-                .serialNumber(serialNumber)
-                .role(role)
-                .build();
+            MemberEntity memberEntity = MemberEntity.builder()
+                    .email(email)
+                    .uid(uid)
+                    .serialNumber(serialNumber)
+                    .role(role)
+                    .build();
 
-        CustomUserDetails customUserDetails = new CustomUserDetails(memberEntity);
-        Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authToken);
+            CustomUserDetails customUserDetails = new CustomUserDetails(memberEntity);
+            Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authToken);
 
-        // @AuthenticationPrincipal 로 바꿀 필요가 있어보임
-        request.setAttribute("email", email);
-
+            // @AuthenticationPrincipal 로 바꿀 필요가 있어보임
+            request.setAttribute("email", email);
+        } catch(Exception e) {
+            Cookie myCookie = new Cookie("Authorization", null);  // 쿠키 값을 null로 설정
+            myCookie.setPath("/");
+            myCookie.setHttpOnly(true);
+            myCookie.setMaxAge(0);  // 남은 만료시간을 0으로 설정
+            response.addCookie(myCookie);
+        }
         filterChain.doFilter(request, response);
     }
 }

@@ -1,5 +1,6 @@
 package com.gorani_samjichang.art_critique.member;
 
+import com.gorani_samjichang.art_critique.appConstant.ExpireTime;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -53,11 +54,11 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         String role = auth.getAuthority();
 
-        String token = jwtUtil.createJwt(email, uid, sn, role, 7*24*60*60*1000L);
+        String token = jwtUtil.createJwt(email, uid, sn, role, ExpireTime.ACCESS_TOKEN);
         String encodedValue = URLEncoder.encode( token, "UTF-8" );
         Cookie cookie = new Cookie( "Authorization", encodedValue);
         cookie.setMaxAge(-1);
-//        cookie.setSecure(true);
+        cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
