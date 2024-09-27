@@ -27,7 +27,7 @@ public class TestController {
     final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @PostConstruct
-    void makeMember() {
+    void makeMember() {//
 
         MemberEntity me = MemberEntity.builder().email("aa@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).open(true).serialNumber("efe1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("ggggg").role("ROLE_USER").isDeleted(false).build();
         memberRepository.save(me);
