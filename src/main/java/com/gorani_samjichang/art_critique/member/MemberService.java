@@ -3,6 +3,7 @@ package com.gorani_samjichang.art_critique.member;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserInfo;
 import com.google.firebase.auth.UserRecord;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
@@ -224,7 +225,6 @@ public class MemberService {
         if (jwtInfo == null) {
             return false;
         } else {
-            System.out.println("옴!");
             String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7 * 24 * 60 * 60 * 1000L);
             registerCookie("Authorization", token, -1, response);
             return true;
@@ -238,11 +238,12 @@ public class MemberService {
 
         if (!email.contains("@")) {
             email = email + "@twitter.com";
+            System.out.println(email);
         }
 
         JwtInfoVo jwtInfo = getTokenInfo(email);
         if (jwtInfo == null) {
-            throw new XUserNotFoundException("JwtInfo is null");
+            throw new XUserNotFoundException("Need to Join");
         }
         String token = jwtUtil.createJwt(email, jwtInfo.getUid(), jwtInfo.getSerialNumber(), jwtInfo.getRole(), 7 * 24 * 60 * 60 * 1000L);
         registerCookie("Authorization", token, -1, response);
