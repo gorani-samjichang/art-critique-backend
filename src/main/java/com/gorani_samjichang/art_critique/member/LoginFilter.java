@@ -53,11 +53,11 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         String role = auth.getAuthority();
 
-        String token = jwtUtil.createJwt(email, uid, sn, role, 7*24*60*60*1000L);
+        String token = jwtUtil.createJwt(email, uid, sn, role, 5*1000L);
         String encodedValue = URLEncoder.encode( token, "UTF-8" );
         Cookie cookie = new Cookie( "Authorization", encodedValue);
         cookie.setMaxAge(-1);
-//        cookie.setSecure(true);
+        cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
