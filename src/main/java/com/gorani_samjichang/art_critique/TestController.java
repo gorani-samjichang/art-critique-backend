@@ -15,7 +15,11 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.PostConstruct;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -82,5 +86,27 @@ public class TestController {
                 .block();
         System.out.println(res);
         return res;
+    }
+
+    @GetMapping("/usedMemory")
+    String memoryCheck() {
+        // JVM 메모리 사용량
+        MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+        long usedHeapMemory = memoryMXBean.getHeapMemoryUsage().getUsed();
+
+        // EC2 전체 메모리 사용량
+        StringBuilder sb = new StringBuilder();
+        sb.append("사용된 힙메모리:").append(usedHeapMemory).append("\n");
+        try {
+            Process process = Runtime.getRuntime().exec("free -m");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sb.toString();
     }
 }
