@@ -6,10 +6,12 @@ import com.gorani_samjichang.art_critique.feedback.FeedbackEntity;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.PostConstruct;
@@ -25,9 +27,10 @@ public class TestController {
     final MemberRepository memberRepository;
     final CreditRepository creditRepository;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
+    final WebClient.Builder webClientBuilder;
 
     @PostConstruct
-    void makeMember() {//
+    void makeMember() {
 
         MemberEntity me = MemberEntity.builder().email("aa@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).open(true).serialNumber("efe1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("ggggg").role("ROLE_USER").isDeleted(false).build();
         memberRepository.save(me);
@@ -65,5 +68,19 @@ public class TestController {
             }
         });
         return emitter;
+    }
+
+    @Value("${feedback.server.host}")
+    String feedbackHost;
+    @GetMapping("/feedbackServerCheck")
+    public String feedbackServerCheck() {
+        String res = webClientBuilder.build()
+                .get()
+                .uri(feedbackHost + "/hello")
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        System.out.println(res);
+        return res;
     }
 }

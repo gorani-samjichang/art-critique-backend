@@ -26,5 +26,25 @@
  nohup java -jar -Duser.timezone=Asia/Seoul $JAR_NAME 1>nohup/stdout.txt 2>nohup/stderr.txt &
  sleep 2
 
+  # 실행된 자바 프로세스의 PID 찾기
+  NEW_PID=$(pgrep -f $JAR_NAME)
 
+  if [ -z "$NEW_PID" ]; then
+      echo "> 새로운 프로세스가 실행되지 않았어요."
+  else
+      echo "> 새롭게 실행된 프로세스의 PID: $NEW_PID"
+      echo "$(date '+%Y-%m-%d %H:%M:%S') - PID: $NEW_PID" >> nohup/memlog  # PID를 nohup/memlog 파일에 기록
+  fi
+
+  # 종료하지 않고 10분마다 메모리 사용량을 기록하는 루프 시작
+  while true; do
+      if ps -p $NEW_PID > /dev/null; then
+          MEM_USAGE=$(ps -p $NEW_PID -o %mem --no-headers)
+          echo "$(date '+%Y-%m-%d %H:%M:%S') - PID $NEW_PID - MEM_USAGE: $MEM_USAGE%" >> nohup/memlog
+      else
+          echo "$(date '+%Y-%m-%d %H:%M:%S') - PID $NEW_PID not found. Exiting..." >> nohup/memlog
+          break
+      fi
+      sleep 600  # 10분마다 기록
+  done
  # end of the script
