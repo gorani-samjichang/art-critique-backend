@@ -64,12 +64,11 @@ public class FeedbackController {
 
     @GetMapping(value = "/public/retrieve/{serialNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter retrieve(@PathVariable String serialNumber) {
-        SseEmitter emitter = new SseEmitter(2 * 60 * 1000L);
+        SseEmitter emitter = new SseEmitter(100 * 1000L);
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
         executor.scheduleAtFixedRate(() -> {
             try {
-                // Send data to the client
                 Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
                 emitter.send(SseEmitter.event()
                         .name("pending")
@@ -85,7 +84,7 @@ public class FeedbackController {
                     );
                     emitter.complete();
                     executor.shutdown();
-                } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
+                } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL) || feedbackEntity.get().getProgressRate() > 100) {
                     RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
                     emitter.send(SseEmitter.event()
                             .name("fail")
