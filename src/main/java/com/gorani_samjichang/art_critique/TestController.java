@@ -120,22 +120,6 @@ public class TestController {
 //            e.printStackTrace();
         }
 
-        WebClient webClient = WebClient.builder()
-                .baseUrl("https://api.notion.com/v1/pages")
-                .defaultHeader("Authorization", "Bearer " + notionApiKey)
-                .defaultHeader("Content-Type", "application/json")
-                .defaultHeader("Notion-Version", "2022-06-28")
-                .build();
-
-        String dateTime = LocalDateTime.now(ZoneOffset.UTC).toString();
-        System.out.println(dateTime);
-        String body = "{\"parent\": {\"database_id\": \"10fa0efc77b180ba8eaadd9f7a20484d\"},\"properties\": {\"사용된 힙메모리\": {\"title\": [{\"text\": {\"content\": \"" + heapMemory + "\"}}]},\"시간\": {\"date\": {\"start\": \"" + dateTime + "\"}}}}";
-        webClient.post()
-                .bodyValue(body)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-
         return sb.toString();
     }
 }
