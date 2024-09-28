@@ -13,6 +13,8 @@ public class MainConfig implements WebMvcConfigurer {
     String frontHost;
     @Value("${front.server.host.cname}")
     String frontHostCname;
+    @Value("${front.server.host.local}")
+    String frontLocalHost;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -20,7 +22,7 @@ public class MainConfig implements WebMvcConfigurer {
         // 모든 경로에 대해 모든 HTTP 메서드에 대한 CORS를 허용
         registry.addMapping("/**")
 //                .allowedOrigins("http://localhost:9100")
-                .allowedOrigins(frontHost, frontHostCname, "http://localhost:9100")
+                .allowedOrigins(frontHost, frontHostCname, frontLocalHost)
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowCredentials(true)
                 .allowedHeaders("*");

@@ -29,6 +29,8 @@ public class SecurityConfig {
     String frontHost;
     @Value("${front.server.host.cname}")
     String frontHostCname;
+    @Value("${front.server.host.local}")
+    String frontLocalHost;
     final AuthenticationConfiguration authenticationConfiguration;
     final JwtUtil jwtUtil;
     @Bean
@@ -50,9 +52,7 @@ public class SecurityConfig {
                             public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
 
                                 CorsConfiguration configuration = new CorsConfiguration();
-//                                configuration.setAllowedOrigins(Collections.singletonList(frontHost));
-//                                configuration.setAllowedOrigins(Collections.singletonList("http://localhost:9100"));
-                                configuration.setAllowedOrigins(Arrays.asList(frontHost, frontHostCname, "http://localhost:9100"));
+                                configuration.setAllowedOrigins(Arrays.asList(frontHost, frontHostCname, frontLocalHost));
                                 configuration.setAllowedMethods(Collections.singletonList("*"));
                                 configuration.setAllowCredentials(true);
                                 configuration.setAllowedHeaders(Collections.singletonList("*"));
