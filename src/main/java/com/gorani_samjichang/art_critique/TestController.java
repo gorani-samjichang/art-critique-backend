@@ -21,6 +21,11 @@ import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -88,25 +93,49 @@ public class TestController {
         return res;
     }
 
+    @Value("${notion.memory.helper}")
+    String notionApiKey;
+    @Value("${notion.memory.database}")
+    String notionDatabaseId;
     @GetMapping("/usedMemory")
     String memoryCheck() {
         // JVM 메모리 사용량
         MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
-        long usedHeapMemory = memoryMXBean.getHeapMemoryUsage().getUsed();
+        long usedHeapMemory = memoryMXBean.getHeapMemoryUsage().getUsed() / 1024 / 1024;
+        String heapMemory = String.valueOf(usedHeapMemory) + "MB";
 
         // EC2 전체 메모리 사용량
         StringBuilder sb = new StringBuilder();
-        sb.append("사용된 힙메모리:").append(usedHeapMemory).append("\n");
+        sb.append("사용된 힙메모리:").append(heapMemory).append("\n");
         try {
             Process process = Runtime.getRuntime().exec("free -m");
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
+            reader.readLine();
+            line = reader.readLine();
+            sb.append(line).append("\n");
+            String [] result = line.split("\\s+");
+            System.out.println(Arrays.toString(result));
         } catch (Exception e) {
-            e.printStackTrace();
+//            e.printStackTrace();
         }
+
+        WebClient webClient = WebClient.builder()
+                .baseUrl("https://api.notion.com/v1/pages")
+                .defaultHeader("Authorization", "Bearer " + notionApiKey)
+                .defaultHeader("Content-Type", "application/json")
+                .defaultHeader("Notion-Version", "2022-06-28")
+                .build();
+
+        String dateTime = LocalDateTime.now(ZoneOffset.UTC).toString();
+        System.out.println(dateTime);
+        String body = "{\"parent\": {\"database_id\": \"10fa0efc77b180ba8eaadd9f7a20484d\"},\"properties\": {\"사용된 힙메모리\": {\"title\": [{\"text\": {\"content\": \"" + heapMemory + "\"}}]},\"시간\": {\"date\": {\"start\": \"" + dateTime + "\"}}}}";
+        webClient.post()
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
         return sb.toString();
     }
 }
