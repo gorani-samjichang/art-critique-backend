@@ -93,10 +93,6 @@ public class TestController {
         return res;
     }
 
-    @Value("${notion.memory.helper}")
-    String notionApiKey;
-    @Value("${notion.memory.database}")
-    String notionDatabaseId;
     @GetMapping("/usedMemory")
     String memoryCheck() {
         // JVM 메모리 사용량
