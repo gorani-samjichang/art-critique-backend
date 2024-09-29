@@ -23,6 +23,7 @@
  if [ ! -d "$DIRECTORY" ]; then
      mkdir "$DIRECTORY"
  fi
+ # 김용웅멘토님이 주시는 파일 resources 폴더에 넣고 나면 로그기록하는 파일 넣을 필요 없음
  nohup java -jar -Duser.timezone=Asia/Seoul $JAR_NAME 1>nohup/stdout.txt 2>nohup/stderr.txt &
  sleep 2
 
