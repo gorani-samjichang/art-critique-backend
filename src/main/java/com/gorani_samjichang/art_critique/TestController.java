@@ -6,15 +6,26 @@ import com.gorani_samjichang.art_critique.feedback.FeedbackEntity;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.PostConstruct;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -25,9 +36,10 @@ public class TestController {
     final MemberRepository memberRepository;
     final CreditRepository creditRepository;
     final BCryptPasswordEncoder bCryptPasswordEncoder;
+    final WebClient.Builder webClientBuilder;
 
     @PostConstruct
-    void makeMember() {//
+    void makeMember() {
 
         MemberEntity me = MemberEntity.builder().email("aa@aa.aa").password(bCryptPasswordEncoder.encode("aaaaaa")).open(true).serialNumber("efe1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("ggggg").role("ROLE_USER").isDeleted(false).build();
         memberRepository.save(me);
@@ -47,7 +59,7 @@ public class TestController {
 
     @GetMapping("/hello")
     String hello() {
-        return "hello";
+        return "hello!";
     }
 
     @GetMapping("/progress")
@@ -65,5 +77,45 @@ public class TestController {
             }
         });
         return emitter;
+    }
+
+    @Value("${feedback.server.host}")
+    String feedbackHost;
+    @GetMapping("/feedbackServerCheck")
+    public String feedbackServerCheck() {
+        String res = webClientBuilder.build()
+                .get()
+                .uri(feedbackHost + "/hello")
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        System.out.println(res);
+        return res;
+    }
+
+    @GetMapping("/usedMemory")
+    String memoryCheck() {
+        // JVM 메모리 사용량
+        MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+        long usedHeapMemory = memoryMXBean.getHeapMemoryUsage().getUsed() / 1024 / 1024;
+        String heapMemory = String.valueOf(usedHeapMemory) + "MB";
+
+        // EC2 전체 메모리 사용량
+        StringBuilder sb = new StringBuilder();
+        sb.append("사용된 힙메모리:").append(heapMemory).append("\n");
+        try {
+            Process process = Runtime.getRuntime().exec("free -m");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            reader.readLine();
+            line = reader.readLine();
+            sb.append(line).append("\n");
+            String [] result = line.split("\\s+");
+            System.out.println(Arrays.toString(result));
+        } catch (Exception e) {
+//            e.printStackTrace();
+        }
+
+        return sb.toString();
     }
 }

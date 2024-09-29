@@ -84,7 +84,15 @@ public class FeedbackController {
                     );
                     emitter.complete();
                     executor.shutdown();
-                } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL) || feedbackEntity.get().getProgressRate() > 100) {
+                } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
+                    RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+                    emitter.send(SseEmitter.event()
+                            .name("fail")
+                            .data(dto)
+                    );
+                    emitter.complete();
+                    executor.shutdown();
+                } else if (feedbackEntity.get().getProgressRate() > 100) {
                     // 타임아웃이 왜 안되는지 모르겠어서 여기서 땜빵함
                     feedbackEntity.get().setState(FeedbackState.FAIL);
                     feedbackRepository.save(feedbackEntity.get());

@@ -31,6 +31,8 @@ public class SecurityConfig {
     String frontHostCname;
     @Value("${front.server.host.local}")
     String frontLocalHost;
+    @Value("${feedback.server.host}")
+    String feedbackHost;
     final AuthenticationConfiguration authenticationConfiguration;
     final JwtUtil jwtUtil;
     @Bean
