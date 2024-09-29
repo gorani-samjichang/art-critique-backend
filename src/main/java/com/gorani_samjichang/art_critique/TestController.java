@@ -59,7 +59,7 @@ public class TestController {
 
     @GetMapping("/hello")
     String hello() {
-        return "hello";
+        return "hello!";
     }
 
     @GetMapping("/progress")
