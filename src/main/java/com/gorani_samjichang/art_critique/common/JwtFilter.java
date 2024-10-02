@@ -34,7 +34,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
         if (token == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+//            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             filterChain.doFilter(request, response);
             return;
         }
