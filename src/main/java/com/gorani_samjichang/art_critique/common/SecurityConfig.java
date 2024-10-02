@@ -20,6 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -66,6 +67,8 @@ public class SecurityConfig {
                                 configuration.setAllowedHeaders(Collections.singletonList("*"));
                                 configuration.setMaxAge(3600L);
 //                                configuration.setExposedHeaders(Collections.singletonList("Authorization"));
+                                configuration.setAllowedHeaders(List.of("*"));
+                                configuration.setExposedHeaders(List.of("*"));
 
                                 return configuration;
                             }
