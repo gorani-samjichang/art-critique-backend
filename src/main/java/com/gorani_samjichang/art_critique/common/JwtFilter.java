@@ -23,12 +23,14 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String requestURI = request.getRequestURI();
         if (isPublicEndpoint(requestURI)) {
+            System.out.println(1);
             filterChain.doFilter(request, response); // JWT 검사를 건너뛰고 다음 필터로 전달
             return;
         }
 
         Cookie[] list = request.getCookies();
         if (list == null) {
+            System.out.println(2);
             filterChain.doFilter(request, response);
             return;
         }
@@ -36,6 +38,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = getJwtFromCookies(request.getCookies());
 
         if (token == null) {
+            System.out.println(3);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT가 필요합니다.");
             return;
         }
@@ -60,6 +63,7 @@ public class JwtFilter extends OncePerRequestFilter {
             // @AuthenticationPrincipal 로 바꿀 필요가 있어보임
             request.setAttribute("email", email);
         } catch(Exception e) {
+            System.out.println(4);
             Cookie myCookie = new Cookie("Authorization", null);  // 쿠키 값을 null로 설정
             myCookie.setPath("/");
             myCookie.setHttpOnly(true);
@@ -69,6 +73,7 @@ public class JwtFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "잘못된 jwt");
             return;
         }
+        System.out.println(5);
         filterChain.doFilter(request, response);
     }
 
