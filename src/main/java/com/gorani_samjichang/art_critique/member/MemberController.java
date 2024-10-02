@@ -68,15 +68,11 @@ public class MemberController {
 
     @GetMapping("/info")
     MemberDto info(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        System.out.println(userDetails);
         Optional<MemberEntity> myEntity = memberRepository.findById(userDetails.getUid());
         return memberService.memberEntityToDto(myEntity.get());
     }
 
     @GetMapping("credit")
-//    ResponseEntity<Integer> credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
-//        return new ResponseEntity<>(memberService.readCredit(userDetails), HttpStatus.OK);
-//    }
     Integer credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return memberService.readCredit(userDetails);
     }

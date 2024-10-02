@@ -239,7 +239,6 @@ public class MemberService {
 
         if (!email.contains("@")) {
             email = email + "@twitter.com";
-            System.out.println(email);
         }
 
         JwtInfoVo jwtInfo = getTokenInfo(email);

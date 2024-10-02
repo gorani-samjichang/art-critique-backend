@@ -315,7 +315,6 @@ public class FeedbackController {
                 .memberSerialNumber(feedbackEntity.getMemberEntity().getSerialNumber())
                 .build();
 
-        System.out.println(feedbackEntity.getMemberEntity());
         List<FeedbackResultDto> ResultDtoList = new ArrayList<>();
         for (FeedbackResultEntity e : feedbackEntity.getFeedbackResults()) {
             FeedbackResultDto resultDto = new FeedbackResultDto();
