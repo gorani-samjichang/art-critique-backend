@@ -41,8 +41,6 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
-        System.out.println("로그인 필터를 통과 중..");
-
         CustomUserDetails customUserDetails = (CustomUserDetails) authResult.getPrincipal();
         String email = customUserDetails.getUsername();
         Long uid = customUserDetails.getUid();
@@ -62,12 +60,10 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         response.addCookie(cookie);
-        System.out.println("로그인 필터를 통과함");
     }
 
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
-        System.out.println("로그인 필터 통과 실패");
         response.setStatus(401);
     }
 }
