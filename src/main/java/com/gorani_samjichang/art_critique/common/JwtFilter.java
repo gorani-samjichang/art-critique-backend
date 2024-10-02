@@ -22,10 +22,10 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String requestURI = request.getRequestURI();
+        System.out.println();
         System.out.println(requestURI + "에 대한 요청을 처리합니다");
         if (isPublicEndpoint(requestURI)) {
             System.out.println("public을 포함한 엔드포인트");
-            System.out.println(requestURI);
             filterChain.doFilter(request, response); // JWT 검사를 건너뛰고 다음 필터로 전달
             return;
         }
@@ -73,7 +73,7 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private boolean isPublicEndpoint(String requestURI) {
-        return requestURI.contains("/public/") || requestURI.contains("/test");
+        return requestURI.contains("/public/") || requestURI.contains("/test/") || requestURI.equals("/api/custom-login");
     }
     private String getJwtFromCookies(Cookie[] cookies) {
         if (cookies != null) {
