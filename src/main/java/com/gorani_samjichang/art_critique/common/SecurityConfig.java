@@ -55,7 +55,12 @@ public class SecurityConfig {
 
                                 CorsConfiguration configuration = new CorsConfiguration();
 //                                configuration.setAllowedOrigins(Collections.singletonList("*"));
-                                configuration.setAllowedOrigins(Arrays.asList(frontHost, frontHostCname, frontLocalHost));
+//                                configuration.setAllowedOrigins(Arrays.asList(frontHost, frontHostCname, frontLocalHost));
+                                configuration.setAllowedOriginPatterns(Arrays.asList(
+                                        frontHost,
+                                        frontHostCname,
+                                        frontLocalHost
+                                ));
                                 configuration.setAllowedMethods(Collections.singletonList("*"));
                                 configuration.setAllowCredentials(true);
                                 configuration.setAllowedHeaders(Collections.singletonList("*"));
