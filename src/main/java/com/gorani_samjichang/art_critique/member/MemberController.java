@@ -73,9 +73,6 @@ public class MemberController {
     }
 
     @GetMapping("credit")
-//    ResponseEntity<Integer> credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
-//        return new ResponseEntity<>(memberService.readCredit(userDetails), HttpStatus.OK);
-//    }
     Integer credit(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return memberService.readCredit(userDetails);
     }

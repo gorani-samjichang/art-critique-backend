@@ -83,6 +83,7 @@ public class TestController {
     String feedbackHost;
     @GetMapping("/feedbackServerCheck")
     public String feedbackServerCheck() {
+        System.out.println("파이썬 서버 점검 시작:" + feedbackHost);
         String res = webClientBuilder.build()
                 .get()
                 .uri(feedbackHost + "/hello")

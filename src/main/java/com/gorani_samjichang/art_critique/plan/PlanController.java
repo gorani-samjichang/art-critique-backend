@@ -48,10 +48,6 @@ public class PlanController {
     @PostMapping("/prepaymentSelect/{index}")
     ResponseEntity<Void> prepaymentSelect(@PathVariable Integer index, @AuthenticationPrincipal CustomUserDetails userDetails) {
         boolean payResult = isPaymentSuccess();
-
-//        System.out.println(userDetails.getUsername());
-//        System.out.println(userDetails.getSerialNumber());
-//        System.out.println(userDetails.getRole());
         if (!payResult) {
             return new ResponseEntity<>(HttpStatusCode.valueOf(501));
         }

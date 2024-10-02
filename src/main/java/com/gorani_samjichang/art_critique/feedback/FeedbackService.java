@@ -110,7 +110,6 @@ public class FeedbackService {
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
-                    System.out.println("!!!!");
                     usedCredit.refundCredit();
                     feedbackEntity.setState(FeedbackState.FAIL);
                     LocalDateTime NOW = LocalDateTime.now();
@@ -124,8 +123,6 @@ public class FeedbackService {
                         fre.setFeedbackEntity(feedbackEntity);
                     }
                     commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
-                    System.out.println(feedbackEntity.getFid() + " " + feedbackEntity.getState() + " " + pythonResponse.getState());
-
                     LocalDateTime NOW = LocalDateTime.now();
                     feedbackEntity.setCreatedAt(NOW);
 

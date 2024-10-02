@@ -21,22 +21,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String token = null;
-        Cookie[] list = request.getCookies();
-        if (list == null) {
-            filterChain.doFilter(request, response);
+        String requestURI = request.getRequestURI();
+        if (isPublicEndpoint(requestURI)) {
+            filterChain.doFilter(request, response); // JWT 검사를 건너뛰고 다음 필터로 전달
             return;
         }
-        for(Cookie cookie : list) {
-            if(cookie.getName().equals("Authorization")) {
-                token = cookie.getValue();
-                break;
-            }
-        }
+
+        String token = getJwtFromCookies(request.getCookies());
+
         if (token == null) {
-            filterChain.doFilter(request, response);
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT가 필요합니다.");
             return;
         }
+
         try {
             String email = jwtUtil.getEmail(token);
             Long uid = jwtUtil.getUid(token);
@@ -56,13 +53,30 @@ public class JwtFilter extends OncePerRequestFilter {
 
             // @AuthenticationPrincipal 로 바꿀 필요가 있어보임
             request.setAttribute("email", email);
+            filterChain.doFilter(request, response);
         } catch(Exception e) {
             Cookie myCookie = new Cookie("Authorization", null);  // 쿠키 값을 null로 설정
             myCookie.setPath("/");
             myCookie.setHttpOnly(true);
             myCookie.setMaxAge(0);  // 남은 만료시간을 0으로 설정
             response.addCookie(myCookie);
+
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "잘못된 jwt");
+            return;
         }
-        filterChain.doFilter(request, response);
+    }
+
+    private boolean isPublicEndpoint(String requestURI) {
+        return requestURI.contains("/public/") || requestURI.contains("/test/") || requestURI.equals("/api/custom-login");
+    }
+    private String getJwtFromCookies(Cookie[] cookies) {
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("Authorization".equals(cookie.getName())) { // 쿠키 이름이 "Authorization"일 경우
+                    return cookie.getValue(); // JWT 토큰 반환
+                }
+            }
+        }
+        return null; // JWT 쿠키가 없으면 null 반환
     }
 }
