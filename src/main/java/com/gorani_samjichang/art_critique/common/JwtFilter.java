@@ -34,7 +34,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (token == null) {
             System.out.println("public을 포함하지 않는 엔드포인트가 토큰을 가지지 않음");
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT가 필요합니다.");
+            filterChain.doFilter(request, response);
+//            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT가 필요합니다.");
             return;
         }
 

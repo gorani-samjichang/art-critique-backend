@@ -68,6 +68,7 @@ public class MemberController {
 
     @GetMapping("/info")
     MemberDto info(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        System.out.println(userDetails);
         Optional<MemberEntity> myEntity = memberRepository.findById(userDetails.getUid());
         return memberService.memberEntityToDto(myEntity.get());
     }
