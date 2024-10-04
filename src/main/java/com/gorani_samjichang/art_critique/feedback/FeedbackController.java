@@ -399,7 +399,7 @@ public class FeedbackController {
     }
 
     @PostMapping("/thread/{serialNumber}")
-    public void addComment(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody String content) {
+    public void addComment(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam String content) {
         feedbackService.addComment(serialNumber, userDetails, content);
     }
 }
