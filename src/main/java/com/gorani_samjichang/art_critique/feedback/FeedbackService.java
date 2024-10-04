@@ -13,6 +13,8 @@ import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryRepository;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +48,7 @@ public class FeedbackService {
     @Value("${feedback.server.host}")
     private String feedbackServerHost;
     final EmitterService emitterService;
+    final CommentRepository commentRepository;
 
 
     String[] dummyTodayGoodImage = new String[]{
@@ -176,13 +179,13 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid,true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(uid, true, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true,true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true, true, pageable);
 
         return convertFeedbackEntityToDto(feedbackEntities);
     }
@@ -225,5 +228,29 @@ public class FeedbackService {
                 .feedbackResults(feedbackEntity.getFeedbackResults())
                 .state(feedbackEntity.getState())
                 .build();
+    }
+
+    public List<CommentDto> findCommentBySerialNumber(String serialNumber) {
+        return commentRepository.findByFeedbackSerialNumberOrderByCreatedAtDesc(serialNumber);
+    }
+
+    @Transactional
+    public void addComment(String serialNumber, CustomUserDetails userDetails, String body) {
+        MemberEntity me = memberRepository.findBySerialNumber(userDetails.getSerialNumber());
+        FeedbackEntity feedback = feedbackRepository.findBySerialNumber(serialNumber).orElseThrow(() -> new IllegalArgumentException("Invalid Feedback"));
+        FeedbackCommentEntity comment = FeedbackCommentEntity
+                .builder()
+                .contents(body)
+                .feedback(feedback)
+                .createdAt(LocalDateTime.now())
+                .modifiedAt(LocalDateTime.now())
+                .memberEntity(me)
+                .build();
+        try {
+            commentRepository.save(comment);
+        } catch (EntityNotFoundException e) {
+            throw new UserNotFoundException("User Not Found");
+        }
+
     }
 }

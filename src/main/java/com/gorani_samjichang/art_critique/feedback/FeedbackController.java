@@ -393,4 +393,14 @@ public class FeedbackController {
         List<FeedbackUrlDto> dto = feedbackRepository.findAllserialNumberAndPictureUrlByMemberEntityUid(serialNumber);
         return new ResponseEntity<>(dto, HttpStatusCode.valueOf(200));
     }
+
+    @GetMapping("/thread/{serialNumber}")
+    public List<CommentDto> getCommentInfos(@PathVariable String serialNumber) {
+        return feedbackService.findCommentBySerialNumber(serialNumber);
+    }
+
+    @PostMapping("/thread/{serialNumber}")
+    public void addComment(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody String content) {
+        feedbackService.addComment(serialNumber, userDetails, content);
+    }
 }
