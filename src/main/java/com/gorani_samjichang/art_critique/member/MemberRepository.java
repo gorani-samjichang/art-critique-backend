@@ -1,9 +1,11 @@
 package com.gorani_samjichang.art_critique.member;
 
+import com.gorani_samjichang.art_critique.feedback.FeedbackUrlDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
@@ -21,4 +23,8 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
     @Query("select p.credit from MemberEntity p where p.uid = :uid and p.isDeleted=false")
     Optional<Integer> getCreditByUid(@Param("uid") Long uid);
+
+    @Query("select new com.gorani_samjichang.art_critique.member.MemberDto(p.email, p.profile, p.role, p.level, p.nickname, p.serialNumber)" +
+            "from MemberEntity p")
+    List<MemberDto> getAllMemberDto();
 }
