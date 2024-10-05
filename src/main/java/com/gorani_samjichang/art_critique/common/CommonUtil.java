@@ -2,7 +2,9 @@ package com.gorani_samjichang.art_critique.common;
 
 import com.google.cloud.storage.Bucket;
 import com.google.firebase.cloud.StorageClient;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,11 +15,14 @@ import java.lang.reflect.Field;
 import java.security.SecureRandom;
 
 @Component
+@RequiredArgsConstructor
+@DependsOn("imageUploader")
 public class CommonUtil {
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     @Value("${firebaseBucket}")
     String bucketName;
+    final ImageUploader imageUploader;
 
     public String generateSecureRandomString(int length) {
         StringBuilder sb = new StringBuilder(length);
@@ -29,11 +34,7 @@ public class CommonUtil {
     }
 
     public String uploadToStorage(MultipartFile file, String fileName) throws IOException {
-        fileName = fileName + ".jpg";
-        Bucket bucket = StorageClient.getInstance().bucket();
-        InputStream content = new ByteArrayInputStream(file.getBytes());
-        bucket.create(fileName, content, file.getContentType());
-        return "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/" + fileName + "?alt=media&token=";
+        return imageUploader.uploadToS3(file, fileName);
     }
 
     public <T> void copyNonNullProperties(T source, T target) {
