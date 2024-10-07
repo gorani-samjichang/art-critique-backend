@@ -393,7 +393,7 @@ public class FeedbackController {
         return new ResponseEntity<>(dto, HttpStatusCode.valueOf(200));
     }
 
-    @GetMapping("/thread/{serialNumber}")
+    @GetMapping("public/thread/{serialNumber}")
     public List<CommentDto> getCommentInfos(@PathVariable String serialNumber) {
         return feedbackService.findCommentBySerialNumber(serialNumber);
     }
