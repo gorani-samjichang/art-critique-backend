@@ -1,24 +1,30 @@
 package com.gorani_samjichang.art_critique.member;
 
 import com.google.firebase.auth.FirebaseAuthException;
+import com.gorani_samjichang.art_critique.appConstant.ExpireTime;
 import com.gorani_samjichang.art_critique.common.JwtUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.MessagingException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
 import com.gorani_samjichang.art_critique.common.exceptions.XUserNotFoundException;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.feedback.FeedbackService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Optional;
 
 @RestController
@@ -34,6 +40,53 @@ public class MemberController {
     @GetMapping("is-logined")
     boolean isLogined() {
         return true;
+    }
+
+    @GetMapping("/public/termConsent")
+    ResponseEntity<Void> termConsent(HttpServletResponse response) {
+        String token = jwtUtil.createConsentJwt(ExpireTime.OAUTH_TOKEN);
+        Cookie cookie = new Cookie("consent", token);
+        cookie.setMaxAge(-1);
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        response.addCookie(cookie);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/public/verifyConsentToken")
+    ResponseEntity<String> verifyConsentToken(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        for (Cookie cookie : cookies) {
+            if ("consent".equals(cookie.getName())) {
+                String consentToken =  cookie.getValue();
+                try {
+                    return new ResponseEntity<>("valid", HttpStatus.OK);
+                } catch (Exception e) {
+                    deleteCookie("consent", response);
+                    deleteCookie("token", response);
+                    return new ResponseEntity<>("invalid", HttpStatus.OK);
+                }
+            }
+        }
+        deleteCookie("consent", response);
+        deleteCookie("token", response);
+        return new ResponseEntity<>("no_token", HttpStatus.OK);
+    }
+
+    @GetMapping("/public/deleteTempToken")
+    ResponseEntity<Void> deleteTempToken(HttpServletResponse response) {
+        deleteCookie("consent", response);
+        deleteCookie("token", response);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    void deleteCookie(String key, HttpServletResponse response) {
+        Cookie myCookie = new Cookie(key, null);  // 쿠키 값을 null로 설정
+        myCookie.setPath("/");
+        myCookie.setHttpOnly(true);
+        myCookie.setMaxAge(0);  // 남은 만료시간을 0으로 설정
+        response.addCookie(myCookie);
     }
 
     @PostMapping("/public/join")
