@@ -67,6 +67,36 @@ public class FeedbackController {
         SseEmitter emitter = new SseEmitter(100 * 1000L);
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
+
+        emitter.onCompletion(executor::shutdown);
+        emitter.onTimeout(() -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            emitter.complete();
+            executor.shutdown();
+        });
+        emitter.onError((ex) -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            executor.shutdown();
+        });
+
         executor.scheduleAtFixedRate(() -> {
             try {
                 Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
@@ -110,35 +140,6 @@ public class FeedbackController {
                 executor.shutdown();
             }
         }, 0, 1, TimeUnit.SECONDS);
-
-        emitter.onCompletion(executor::shutdown);
-        emitter.onTimeout(() -> {
-            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("fail")
-                        .data(dto)
-                );
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            emitter.complete();
-            executor.shutdown();
-        });
-        emitter.onError((ex) -> {
-            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("fail")
-                        .data(dto)
-                );
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            executor.shutdown();
-        });
 
         return emitter;
     }
