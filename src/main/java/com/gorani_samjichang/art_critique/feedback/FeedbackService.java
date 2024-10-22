@@ -122,6 +122,7 @@ public class FeedbackService {
                     memberRepository.save(me);
                 })
                 .doOnNext(pythonResponse -> {
+                    System.out.println(pythonResponse.toString());
                     for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
                         fre.setFeedbackEntity(feedbackEntity);
                     }

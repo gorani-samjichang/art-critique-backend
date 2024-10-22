@@ -299,11 +299,15 @@ public class FeedbackController {
     }
 
     RetrieveFeedbackDto generateRetrieveFeedbackDto(FeedbackEntity feedbackEntity) {
+
+        // presignedUrl 생성 메서드 만들어서
+
         RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
                 .isBookmarked(feedbackEntity.getIsBookmarked())
                 .version(feedbackEntity.getVersion())
                 .createdAt(feedbackEntity.getCreatedAt())
                 .pictureUrl(feedbackEntity.getPictureUrl())
+                // .Image3DUrl(어쩌고);
                 .serialNumber(feedbackEntity.getSerialNumber())
                 .userReviewDetail(feedbackEntity.getUserReviewDetail())
                 .userReview(feedbackEntity.getUserReview())
