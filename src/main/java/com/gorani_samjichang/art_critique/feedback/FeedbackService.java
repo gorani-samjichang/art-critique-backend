@@ -111,11 +111,16 @@ public class FeedbackService {
                 .header("Content-Type", "application/json")
                 .bodyValue(jsonData)
                 .retrieve()
-                .bodyToMono(FeedbackEntity.class)
+//                .bodyToMono(FeedbackEntity.class)
+                .bodyToMono(String.class)
                 .doOnError(error -> {
+                    System.out.println("!!!!!!!!!!!!!!");
+                    System.out.println(error.getCause());
+                    System.out.println("!!!!!!!!!!!!!!");
+                    System.out.println(error.getMessage());
                     usedCredit.refundCredit();
-//                    feedbackEntity.setState(FeedbackState.FAIL);
-                    feedbackEntity.setState("TEST");
+                    feedbackEntity.setState(FeedbackState.FAIL);
+//                    feedbackEntity.setState("TEST");
                     LocalDateTime NOW = LocalDateTime.now();
                     feedbackEntity.setCreatedAt(NOW);
                     creditRepository.save(usedCredit);
@@ -124,25 +129,25 @@ public class FeedbackService {
                 })
                 .doOnNext(pythonResponse -> {
                     System.out.println(pythonResponse.toString());
-                    try {
-                        for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
-                            fre.setFeedbackEntity(feedbackEntity);
-                        }
-                        commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
-                        LocalDateTime NOW = LocalDateTime.now();
-                        feedbackEntity.setCreatedAt(NOW);
-
-                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
-                                .type(usedCredit.getType())
-                                .usedDate(NOW)
-                                .memberEntity(me)
-                                .feedbackEntity(feedbackEntity)
-                                .build();
-                        creditUsedHistoryRepository.save(historyEntity);
-                        feedbackRepository.save(feedbackEntity);
-                    } catch (NullPointerException e) {
-                        System.out.println("null point exception 발생");
-                    }
+//                    try {
+//                        for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
+//                            fre.setFeedbackEntity(feedbackEntity);
+//                        }
+//                        commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
+//                        LocalDateTime NOW = LocalDateTime.now();
+//                        feedbackEntity.setCreatedAt(NOW);
+//
+//                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
+//                                .type(usedCredit.getType())
+//                                .usedDate(NOW)
+//                                .memberEntity(me)
+//                                .feedbackEntity(feedbackEntity)
+//                                .build();
+//                        creditUsedHistoryRepository.save(historyEntity);
+//                        feedbackRepository.save(feedbackEntity);
+//                    } catch (NullPointerException e) {
+//                        System.out.println("null point exception 발생");
+//                    }
                 })
                 .subscribe();
 
