@@ -114,7 +114,8 @@ public class FeedbackService {
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
                     usedCredit.refundCredit();
-                    feedbackEntity.setState(FeedbackState.FAIL);
+//                    feedbackEntity.setState(FeedbackState.FAIL);
+                    feedbackEntity.setState("TEST");
                     LocalDateTime NOW = LocalDateTime.now();
                     feedbackEntity.setCreatedAt(NOW);
                     creditRepository.save(usedCredit);
