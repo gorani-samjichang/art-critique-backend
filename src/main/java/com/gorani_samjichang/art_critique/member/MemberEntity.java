@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="member")
+@Table(name="member", indexes = @Index(name = "idx_member_serialNumber", unique = true, columnList = "serialNumber"))
 @Getter
 @Setter
 @Builder
