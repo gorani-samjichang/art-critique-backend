@@ -13,11 +13,11 @@ import java.util.Optional;
 public interface FeedbackRepository extends JpaRepository<FeedbackEntity, Long> {
     Optional<FeedbackEntity> findBySerialNumber(String serialNumber);
 
-    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadOrderByCreatedAtDesc(Long uid, boolean isHead, Pageable page);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadAndStateNotOrderByCreatedAtDesc(Long uid, boolean isHead, String state, Pageable page);
 
-    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadOrderByCreatedAtAsc(Long uid, boolean isHead, Pageable page);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadAndStateNotOrderByCreatedAtAsc(Long uid, boolean isHead, String state, Pageable page);
 
-    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadOrderByTotalScoreDesc(Long uid, boolean isHead, Pageable page);
+    Slice<FeedbackEntity> findByMemberEntityUidAndIsHeadAndStateNotOrderByTotalScoreDesc(Long uid, boolean isHead, String state,Pageable page);
 
     List<FeedbackEntity> findByMemberEntityUidAndIsHeadAndStateAndCreatedAtAfterOrderByCreatedAtAsc(Long uid, boolean isHead, String state, LocalDateTime date);
 
