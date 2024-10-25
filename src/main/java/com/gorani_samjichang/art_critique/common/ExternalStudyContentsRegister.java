@@ -1,10 +1,12 @@
 package com.gorani_samjichang.art_critique.common;
 
+import com.gorani_samjichang.art_critique.study.ExternalStudyContentClassificationEntity;
+import com.gorani_samjichang.art_critique.study.ExternalStudyContentClassificationRepository;
 import com.gorani_samjichang.art_critique.study.ExternalStudyContentEntity;
 import com.gorani_samjichang.art_critique.study.ExternalStudyContentsRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -18,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class ExternalStudyContentsRegister {
     long stamp = 202401010010L;
     final S3Client s3Client;
     final ExternalStudyContentsRepository externalStudyContentsRepository;
+    final ExternalStudyContentClassificationRepository externalStudyContentClassificationRepository;
     @Value("${aws.S3.bucket}")
     private String bucketName;
 
@@ -35,8 +39,8 @@ public class ExternalStudyContentsRegister {
     }
 
     @PostConstruct
-    public void onStartup(){
-        stamp=externalStudyContentsRepository.getStamp().orElse(0L);
+    public void onStartup() {
+        stamp = externalStudyContentsRepository.getStamp().orElse(0L);
     }
 
     private List<String> downloadFile(String key) {
@@ -57,24 +61,43 @@ public class ExternalStudyContentsRegister {
         }
     }
 
-    private void insertData(String tsv, long now) {
-        String[] l = tsv.split("\t");
+    private ExternalStudyContentEntity insertStudyContentData(String[] l, long now) {
         ExternalStudyContentEntity entity = ExternalStudyContentEntity
                 .builder()
                 .title(l[0])
                 .url(l[1])
-                .author(l[2])
-                .about(l[3])
-                .keyword((l[4]))
+                .type(l[2])
+                .author(l[3])
                 .stamp(now)
                 .build();
-        externalStudyContentsRepository.save(entity);
+        try {
+            externalStudyContentsRepository.save(entity);
+            return externalStudyContentsRepository.findByUrl(l[1]).get();
+        } catch (ConstraintViolationException e) {
+            Optional<ExternalStudyContentEntity> entityFind = externalStudyContentsRepository.findByUrl(l[1]);
+            if (entityFind.isPresent()) return entityFind.get();
+            throw e;
+        }
     }
 
-    @Scheduled(fixedRate = 60*60*1000)
+    private ExternalStudyContentEntity insertData(String tsv, ExternalStudyContentEntity beforeContent, long now) {
+        String[] l = tsv.split("\t");
+        if (!beforeContent.getUrl().equals(l[1])) {
+            beforeContent = insertStudyContentData(l, now);
+        }
+        ExternalStudyContentClassificationEntity entity = ExternalStudyContentClassificationEntity.builder().content(beforeContent)
+                .keyword(l[5])
+                .category(l[4])
+                .build();
+        externalStudyContentClassificationRepository.save(entity);
+        return beforeContent;
+    }
+
+    @Scheduled(fixedRate = 60 * 60 * 1000 * 2)
     public void register() {
         List<S3Object> tsv_files = readS3();
         long max_stamp = stamp;
+        ExternalStudyContentEntity beforeContent = ExternalStudyContentEntity.builder().url("").build();
         for (S3Object tsv_file : tsv_files) {
             try {
                 String key = tsv_file.key().substring(4);
@@ -88,7 +111,7 @@ public class ExternalStudyContentsRegister {
                 }
                 List<String> contents = downloadFile(tsv_file.key());
                 for (String content : contents) {
-                    insertData(content, d);
+                    beforeContent = insertData(content, beforeContent, d);
                 }
             } catch (Exception e) {
             }
