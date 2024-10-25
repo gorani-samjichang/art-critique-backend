@@ -3,8 +3,10 @@ package com.gorani_samjichang.art_critique.study;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
-@Table(name="externalStudyContents", indexes = @Index(name = "idx_studycontents_about", columnList = "about"))
+@Table(name="externalStudyContents")
 @Getter
 @Setter
 @Builder
@@ -14,10 +16,9 @@ public class ExternalStudyContentEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long cid;
-    private String title;
     private String url;
+    private String title;
+    private String type;
     private Long stamp;
-    private String about;
-    private String keyword;
     private String author;
 }
