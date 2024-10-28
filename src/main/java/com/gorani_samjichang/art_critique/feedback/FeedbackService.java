@@ -112,15 +112,9 @@ public class FeedbackService {
                 .bodyValue(jsonData)
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
-//                .bodyToMono(String.class)
                 .doOnError(error -> {
-//                    System.out.println("!!!!!!!!!!!!!!");
-//                    System.out.println(error.getCause());
-//                    System.out.println("!!!!!!!!!!!!!!");
-//                    System.out.println(error.getMessage());
                     usedCredit.refundCredit();
                     feedbackEntity.setState(FeedbackState.FAIL);
-//                    feedbackEntity.setState("TEST");
                     LocalDateTime NOW = LocalDateTime.now();
                     feedbackEntity.setCreatedAt(NOW);
                     creditRepository.save(usedCredit);
@@ -148,11 +142,8 @@ public class FeedbackService {
                     } catch (NullPointerException e) {
                         System.out.println("null point exception 발생");
                     } catch (Exception e) {
-                        System.out.println("!!!!");
                         System.out.println(e.getCause());
-                        System.out.println("!!!!");
                         System.out.println(e.getMessage());
-
                     }
                 })
                 .subscribe();
