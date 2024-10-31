@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="feedback")
+@Table(name="feedback", indexes = @Index(name="idx_serialNumber_feedback", columnList = "serialNumber"))
 @Getter
 @Setter
 @Builder
@@ -22,6 +22,7 @@ public class FeedbackEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long fid;
+    @Column(unique = true)
     private String serialNumber;
     private String pictureUrl;
     private String title;

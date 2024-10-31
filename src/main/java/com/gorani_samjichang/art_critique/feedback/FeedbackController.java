@@ -67,6 +67,36 @@ public class FeedbackController {
         SseEmitter emitter = new SseEmitter(100 * 1000L);
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
+
+        emitter.onCompletion(executor::shutdown);
+        emitter.onTimeout(() -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            emitter.complete();
+            executor.shutdown();
+        });
+        emitter.onError((ex) -> {
+            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("fail")
+                        .data(dto)
+                );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            executor.shutdown();
+        });
+
         executor.scheduleAtFixedRate(() -> {
             try {
                 Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
@@ -110,35 +140,6 @@ public class FeedbackController {
                 executor.shutdown();
             }
         }, 0, 1, TimeUnit.SECONDS);
-
-        emitter.onCompletion(executor::shutdown);
-        emitter.onTimeout(() -> {
-            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("fail")
-                        .data(dto)
-                );
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            emitter.complete();
-            executor.shutdown();
-        });
-        emitter.onError((ex) -> {
-            Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-            RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("fail")
-                        .data(dto)
-                );
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            executor.shutdown();
-        });
 
         return emitter;
     }
@@ -299,11 +300,15 @@ public class FeedbackController {
     }
 
     RetrieveFeedbackDto generateRetrieveFeedbackDto(FeedbackEntity feedbackEntity) {
+
+        // presignedUrl 생성 메서드 만들어서
+
         RetrieveFeedbackDto dto = RetrieveFeedbackDto.builder()
                 .isBookmarked(feedbackEntity.getIsBookmarked())
                 .version(feedbackEntity.getVersion())
                 .createdAt(feedbackEntity.getCreatedAt())
                 .pictureUrl(feedbackEntity.getPictureUrl())
+                // .Image3DUrl(어쩌고);
                 .serialNumber(feedbackEntity.getSerialNumber())
                 .userReviewDetail(feedbackEntity.getUserReviewDetail())
                 .userReview(feedbackEntity.getUserReview())
@@ -393,7 +398,7 @@ public class FeedbackController {
         return new ResponseEntity<>(dto, HttpStatusCode.valueOf(200));
     }
 
-    @GetMapping("public/thread/{serialNumber}")
+    @GetMapping("/public/thread/{serialNumber}")
     public List<CommentDto> getCommentInfos(@PathVariable String serialNumber) {
         return feedbackService.findCommentBySerialNumber(serialNumber);
     }

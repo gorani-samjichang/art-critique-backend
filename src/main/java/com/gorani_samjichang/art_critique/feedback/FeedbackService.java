@@ -122,21 +122,29 @@ public class FeedbackService {
                     memberRepository.save(me);
                 })
                 .doOnNext(pythonResponse -> {
-                    for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
-                        fre.setFeedbackEntity(feedbackEntity);
-                    }
-                    commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
-                    LocalDateTime NOW = LocalDateTime.now();
-                    feedbackEntity.setCreatedAt(NOW);
+                    System.out.println(pythonResponse.toString());
+                    try {
+                        for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
+                            fre.setFeedbackEntity(feedbackEntity);
+                        }
+                        commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
+                        LocalDateTime NOW = LocalDateTime.now();
+                        feedbackEntity.setCreatedAt(NOW);
 
-                    CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
-                            .type(usedCredit.getType())
-                            .usedDate(NOW)
-                            .memberEntity(me)
-                            .feedbackEntity(feedbackEntity)
-                            .build();
-                    creditUsedHistoryRepository.save(historyEntity);
-                    feedbackRepository.save(feedbackEntity);
+                        CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
+                                .type(usedCredit.getType())
+                                .usedDate(NOW)
+                                .memberEntity(me)
+                                .feedbackEntity(feedbackEntity)
+                                .build();
+                        creditUsedHistoryRepository.save(historyEntity);
+                        feedbackRepository.save(feedbackEntity);
+                    } catch (NullPointerException e) {
+                        System.out.println("null point exception 발생");
+                    } catch (Exception e) {
+                        System.out.println(e.getCause());
+                        System.out.println(e.getMessage());
+                    }
                 })
                 .subscribe();
 

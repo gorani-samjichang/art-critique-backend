@@ -55,6 +55,14 @@ public class JwtUtil {
                 .compact();
     }
 
+    public String createConsentJwt(Long expireMs) {
+        return Jwts.builder()
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expireMs))
+                .signWith(secretKey)
+                .compact();
+    }
+
     public String createEmailRandomJwt(String email, Long expireMs,String random){
         return Jwts.builder()
                 .claim("email", email)
