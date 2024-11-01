@@ -16,4 +16,5 @@ public class MemberDto {
     private String level;
     private String nickname;
     private String serialNumber;
+    private String naverPayRecurrentId;
 }
