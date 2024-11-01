@@ -178,6 +178,7 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
         LocalDateTime oneYearAgo = LocalDateTime.now().minus(1, ChronoUnit.YEARS);
+        System.out.println(oneYearAgo);
         List<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateAndCreatedAtAfterOrderByCreatedAtAsc(uid, true, "COMPLETED", oneYearAgo);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
