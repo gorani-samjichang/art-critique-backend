@@ -37,7 +37,7 @@ public class MemberController {
     final FeedbackService feedbackService;
     private final JwtUtil jwtUtil;
 
-    @GetMapping("is-logined")
+    @GetMapping("/is-logined")
     boolean isLogined() {
         return true;
     }
