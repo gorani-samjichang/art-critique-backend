@@ -79,6 +79,7 @@ public class TestController {
         return emitter;
     }
 
+    // http요청을 닫아주는 코드를 찾아서 추가할 필요가 있음
     @Value("${feedback.server.host}")
     String feedbackHost;
     @GetMapping("/feedbackServerCheck")
