@@ -2,6 +2,7 @@ package com.gorani_samjichang.art_critique.feedback;
 
 import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
+import com.gorani_samjichang.art_critique.common.S3Utils;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
@@ -21,8 +22,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.context.annotation.DependsOn;
+import lombok.extern.slf4j.Slf4j;
+
+import com.google.gson.JsonParser;
+import com.google.gson.JsonObject;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -32,10 +39,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/feedback")
 @RequiredArgsConstructor
+@DependsOn("s3Utils")
 public class FeedbackController {
+    private final S3Utils s3Utils;
     final FeedbackService feedbackService;
     final FeedbackRepository feedbackRepository;
     final MemberRepository memberRepository;
@@ -327,6 +337,29 @@ public class FeedbackController {
             resultDto.setFeedbackType(e.getFeedbackType());
             resultDto.setFeedbackDisplay(e.getFeedbackDisplay());
             ResultDtoList.add(resultDto);
+
+            try {
+                if ("3d-model".equals(e.getFeedbackType())) {
+                    JsonObject jsonObject = JsonParser.parseString(e.getFeedbackContent()).getAsJsonObject();
+                    if (!jsonObject.has("s3_url")) {
+                        continue;
+                    }
+                    String s3UrlString = jsonObject.get("s3_url").getAsString();
+                    URI s3Uri = new URI(s3UrlString);
+
+                    String bucket = s3Uri.getHost();
+                    String key = s3Uri.getPath().substring(1);
+
+                    String presigned_url = s3Utils.getPresignedUrl(bucket, key);
+
+                    JsonObject newFeedbackContentJson = new JsonObject();
+                    newFeedbackContentJson.addProperty("image_url", presigned_url);
+                    String newFeedbackContent = newFeedbackContentJson.toString();
+                    resultDto.setFeedbackContent(newFeedbackContent);
+                }
+            } catch(Exception exception) {
+                log.error("Failed to PresignedGetObjectRequest. e.getFrid=" + e.getFrid(), exception);
+            }
         }
         dto.setFeedbackResults(ResultDtoList);
         return dto;
