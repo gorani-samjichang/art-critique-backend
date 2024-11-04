@@ -84,7 +84,8 @@ public class FeedbackService {
         }
 
         String serialNumber = UUID.randomUUID().toString();
-        String imageUrl = commonUtil.uploadToStorage(imageFile, serialNumber);
+        String pictureUUID = UUID.randomUUID().toString();
+        String imageUrl = commonUtil.uploadToStorage(imageFile, pictureUUID);
         FeedbackEntity feedbackEntity = FeedbackEntity
                 .builder()
                 .serialNumber(serialNumber)
