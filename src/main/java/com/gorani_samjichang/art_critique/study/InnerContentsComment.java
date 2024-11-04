@@ -19,7 +19,7 @@ public class InnerContentsComment {
     private Long reid;
 
     @ManyToOne
-    @JoinColumn(name = "uid")
+    @JoinColumn(name = "uid", referencedColumnName = "serialNumber")
     private MemberEntity member;
 
     @ManyToOne

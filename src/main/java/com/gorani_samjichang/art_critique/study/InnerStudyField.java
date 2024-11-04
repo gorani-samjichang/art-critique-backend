@@ -1,9 +1,9 @@
 package com.gorani_samjichang.art_critique.study;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 
 @Entity
 @Table(name = "InnerStudyField")
@@ -14,6 +14,9 @@ import lombok.*;
 @AllArgsConstructor
 public class InnerStudyField {
     @Id
-    private Long fid;
-    private String title;
+    private Long categoryNumber;
+    private String categoryTitle;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "field")
+    private List<InnerStudyCategory> detail;
 }

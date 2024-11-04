@@ -12,8 +12,8 @@ import lombok.*;
 @AllArgsConstructor
 public class InnerStudyCategory {
     @Id
-    private Long cid;
-    String name;
+    private Long categroyNum;
+    String categoryName;
 
     @ManyToOne
     @JoinColumn(name = "fid")

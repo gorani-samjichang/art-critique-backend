@@ -1,5 +1,6 @@
 package com.gorani_samjichang.art_critique.common;
 
+import com.gorani_samjichang.art_critique.common.exceptions.CannotFindBySerialNumberException;
 import com.gorani_samjichang.art_critique.common.exceptions.ServiceNotAvailableException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
@@ -36,9 +37,13 @@ public class GlobalExceptionHandler {
         return e.getMessage();
     }
 
+    @ExceptionHandler(CannotFindBySerialNumberException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleCannotFindBySerialNumber(final CannotFindBySerialNumberException e) {
+        return e.getMessage();
+    }
     // Todo: XUserNotFoundExceiptionHandler
     // Todo: BadFeeedbackRequest
     // Todo: NoPermissionException
-    // Todo: CannotFindBySerialNumberException
     // Todo: UnsupportedEncodingException
 }

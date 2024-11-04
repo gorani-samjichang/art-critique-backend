@@ -15,19 +15,19 @@ import java.util.Objects;
 @Getter
 @Setter
 public class ContentsMemberId implements Serializable {
-    private Long contentsId;
-    private Long memberId;
+    private String contentsSerialNumber;
+    private String memberSerialNumber;
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ContentsMemberId that = (ContentsMemberId) o;
-        return Objects.equals(memberId, that.memberId) && Objects.equals(contentsId, that.contentsId);
+        return Objects.equals(memberSerialNumber, that.memberSerialNumber) && Objects.equals(contentsSerialNumber, that.contentsSerialNumber);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(memberId, contentsId);
+        return Objects.hash(memberSerialNumber, contentsSerialNumber);
     }
 }

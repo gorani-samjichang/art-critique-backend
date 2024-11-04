@@ -17,14 +17,14 @@ public class ContentsLikes {
 
 
     @ManyToOne
-    @MapsId("contentsId")
-    @JoinColumn(name = "cid")
+    @MapsId("contentsSerialNumber")
+    @JoinColumn(name = "cid", referencedColumnName = "serialNumber")
     private InnerContentsEntity contents;
 
 
     @ManyToOne
-    @MapsId("memberId")
-    @JoinColumn(name = "uid")
+    @MapsId("memberSerialNumber")
+    @JoinColumn(name = "uid", referencedColumnName = "serialNumber")
     private MemberEntity member;
 
 }
