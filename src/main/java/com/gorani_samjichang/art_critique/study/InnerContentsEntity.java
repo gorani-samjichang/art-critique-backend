@@ -5,9 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 
 @Entity
 @Table(name = "innerContents", indexes = @Index(name = "inner_contents_serialnumber_idx", columnList = "serialNumber", unique = true))

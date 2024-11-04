@@ -1,6 +1,5 @@
 package com.gorani_samjichang.art_critique.study;
 
-import com.gorani_samjichang.art_critique.member.MemberEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

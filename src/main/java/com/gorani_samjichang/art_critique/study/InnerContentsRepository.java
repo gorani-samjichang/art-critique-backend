@@ -13,16 +13,19 @@ import java.util.Optional;
 public interface InnerContentsRepository extends JpaRepository<InnerContentsEntity, Long> {
     @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsDTO(c.title, c.thumbnailUrl, m.nickname, c.serialNumber, sc.categoryName, sf.categoryTitle, c.createdAt, c.likes, c.view ) from InnerContentsEntity c join c.subCategory sc join sc.field sf join c.author m order by c.createdAt desc")
     List<InnerContentsDTO> findTop5ByOrderByCreatedAtDesc(Pageable pageable);
+
     @Query("select new com.gorani_samjichang.art_critique.study.SimpleInnerContentDTO(c.title, c.serialNumber) from InnerContentsEntity c order by c.likes desc")
     List<SimpleInnerContentDTO> findTop5ByOrderByLikesDesc(Pageable pageable);
+
     Optional<InnerContentsEntity> findBySerialNumber(String serialNumber);
-    @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsCategoryDTO"+
+
+    @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsCategoryDTO" +
             "(m.nickname, m.profile, i.createdAt, i.serialNumber, i.thumbnailUrl, " +
             "i.likes,CASE WHEN i.level = 'newbie' THEN '입문' WHEN i.level = 'chobo' THEN '초보' WHEN i.level = 'intermediate' THEN '중수' WHEN i.level = 'gosu' THEN '고수' ELSE '미분류' END, i.title) from InnerContentsEntity i " +
             "join i.author m join i.subCategory sc join sc.field f where sc.categroyNum = :subCategoryNum and f.categoryNumber = :fieldNum and i.level = :level order by i.createdAt desc")
     List<InnerContentsCategoryDTO> searchInnerContentsWithCategoryAndLevel(Long fieldNum, Long subCategoryNum, String level, Pageable pageable);
 
-    @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsCategoryDTO"+
+    @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsCategoryDTO" +
             "(m.nickname, m.profile, i.createdAt, i.serialNumber, i.thumbnailUrl, " +
             "i.likes,CASE WHEN i.level = 'newbie' THEN '입문' WHEN i.level = 'chobo' THEN '초보' WHEN i.level = 'intermediate' THEN '중수' WHEN i.level = 'gosu' THEN '고수' ELSE '미분류' END, i.title) from InnerContentsEntity i " +
             "join i.author m join i.subCategory sc join sc.field f where sc.categroyNum = :subCategoryNum and f.categoryNumber = :fieldNum order by i.createdAt desc")
