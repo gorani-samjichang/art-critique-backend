@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -70,8 +71,25 @@ public class StudyController {
         studyService.registerLikes(serialNumber, userDetails.getSerialNumber());
     }
 
-    @GetMapping("sameTagArticle/{tag}")
+    @GetMapping("/sameTagArticle/{tag}")
     public List<SimpleInnerContentDTO> sameTagArticle(@PathVariable String tag) {
         return studyService.findByTag(tag);
+    }
+
+    @GetMapping("/sameCategoryArticle/{serialNumber}")
+    public List<SimpleInnerContentDTO> sameCategoryArticle(@PathVariable String serialNumber) {
+        return studyService.findSameCategory(serialNumber);
+    }
+
+    @PostMapping("/makeContent")
+    public void makeStudyContent(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestPart(value = "ImageFileList") List<MultipartFile> imageFileList,
+                                 @RequestPart(value = "Content") ContentRequestDTO contentRequestDTO) {
+        studyService.makeContent(userDetails.getSerialNumber(), imageFileList, contentRequestDTO);
+
+    }
+
+    @GetMapping("/articleContent/{serialNumber}")
+    public ContentsDetailResponseDTO getContentInfoWithDetails(@PathVariable String serialNumber) {
+        return studyService.getContentInfoWithDetails(serialNumber);
     }
 }

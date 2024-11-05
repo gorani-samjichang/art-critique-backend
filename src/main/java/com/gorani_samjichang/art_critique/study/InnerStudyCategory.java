@@ -13,7 +13,7 @@ import lombok.*;
 public class InnerStudyCategory {
     @Id
     private Long categroyNum;
-    String categoryName;
+    private String categoryName;
 
     @ManyToOne
     @JoinColumn(name = "fid")

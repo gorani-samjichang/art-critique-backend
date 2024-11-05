@@ -9,4 +9,5 @@ public interface InnerStudyFieldRepository extends JpaRepository<InnerStudyField
     @Override
     @EntityGraph(attributePaths = {"detail"})
     List<InnerStudyField> findAll();
+
 }

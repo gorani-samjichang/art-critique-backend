@@ -38,6 +38,21 @@ public interface InnerContentsRepository extends JpaRepository<InnerContentsEnti
     @Query("select new com.gorani_samjichang.art_critique.study.SimpleInnerContentDTO(c.title, c.serialNumber) from InnerContentsEntity c join c.tags tg where tg = :tag order by c.cid desc")
     List<SimpleInnerContentDTO> searchWithTag(String tag);
 
+    @Query("select new com.gorani_samjichang.art_critique.study.SimpleInnerContentDTO(c.title, c.serialNumber) " +
+            "from InnerContentsEntity c join c.subCategory sc " +
+            "where sc.categroyNum = (select c2.subCategory.categroyNum from InnerContentsEntity c2 where c2.serialNumber = :serialNumber) order by c.likes desc")
+    List<SimpleInnerContentDTO> searchWithCategory(String serialNumber, Pageable pageable);
+
+    @Query("select new com.gorani_samjichang.art_critique.study.ContentsDetailResponseDTO(c.title, m.nickname, m.profile, m.serialNumber, ca.categoryName, f.categoryNumber, ca.categroyNum, c.likes, c.view, c.createdAt) " +
+            "from InnerContentsEntity c join c.author m join c.subCategory ca join ca.field f where c.serialNumber= :serialNumber")
+    Optional<ContentsDetailResponseDTO> searchWithSerialNumberToContentsDetailResponseDTOWithoutDetails(@Param("serialNumber") String serialNumber);
+
+    @Query("select c.tags from InnerContentsEntity c join c.tags where c.serialNumber= :serialNumber")
+    List<String> getTags(@Param("serialNumber") String serialNumber);
+
+    @Query("select new com.gorani_samjichang.art_critique.study.ArticleContentsDTO(d.type, d.content) from InnerContentsDetailsEntity d join d.innerContents c where c.serialNumber = :serialNumber order by d.cid asc")
+    List<ArticleContentsDTO> findArticleContentBySerialNumber(@Param("serialNumber") String serialNumber);
+
     @Transactional
     @Modifying
     @Query("UPDATE InnerContentsEntity c SET c.view=c.view+1 where c.serialNumber= :serialNumber")
