@@ -1,9 +1,6 @@
 package com.gorani_samjichang.art_critique.study;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
@@ -11,6 +8,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
+@ToString
 public class ContentRequestDTO {
     private Long bigCategory;
     private Long smallCategory;
