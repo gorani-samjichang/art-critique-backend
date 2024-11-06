@@ -47,7 +47,7 @@ public class TestController {
     @PostConstruct
     void makeMember() {
         if(!memberRepository.existsByEmail("admin@aa.aa")) {
-            MemberEntity admin = MemberEntity.builder().email("admin@aa.aa").password(bCryptPasswordEncoder.encode("a3min2p")).open(true).serialNumber("e22e1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("admin").role("ROLE_ADMIN").isDeleted(false).build();
+            MemberEntity admin = MemberEntity.builder().email("admin@aa.aa").password("$2a$10$1cYjz6/0YN2yfme968RxPOA34BF9KAx4nMDVD3GWqLDsXJnx0j2Yu").open(true).serialNumber("e22e1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("admin").role("ROLE_ADMIN").isDeleted(false).build();
             memberRepository.save(admin);
             CreditEntity c2 = CreditEntity.builder().memberEntity(admin).state("VALID").purchaseDate(LocalDateTime.now().minusMinutes(5)).expireDate(LocalDateTime.now().plusMonths(2).minusMinutes(5)).type("PREPAYMENT").remainAmount(2).purchaseAmount(2).usedAmount(0).build();
             admin.addCredit(c2);

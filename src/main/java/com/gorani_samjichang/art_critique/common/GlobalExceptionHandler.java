@@ -1,8 +1,6 @@
 package com.gorani_samjichang.art_critique.common;
 
-import com.gorani_samjichang.art_critique.common.exceptions.ServiceNotAvailableException;
-import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
-import com.gorani_samjichang.art_critique.common.exceptions.UserNotValidException;
+import com.gorani_samjichang.art_critique.common.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,9 +34,18 @@ public class GlobalExceptionHandler {
         return e.getMessage();
     }
 
+    @ExceptionHandler(CannotFindBySerialNumberException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleCannotFindBySerialNumber(final CannotFindBySerialNumberException e) {
+        return e.getMessage();
+    }
+
+    @ExceptionHandler(NoPermissionException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public String handleNoPermission(final NoPermissionException e) {
+        return e.getMessage();
+    }
     // Todo: XUserNotFoundExceiptionHandler
     // Todo: BadFeeedbackRequest
-    // Todo: NoPermissionException
-    // Todo: CannotFindBySerialNumberException
     // Todo: UnsupportedEncodingException
 }

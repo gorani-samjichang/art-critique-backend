@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 "/test/**",
                                 "/member/public/**",
                                 "/feedback/public/**",
-                                "/plan/public/**").permitAll()
+                                "/plan/public/**",
+                                "/study/public/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtFilter(jwtUtil), LoginFilter.class)
