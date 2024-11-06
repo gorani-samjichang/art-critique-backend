@@ -8,6 +8,10 @@ import com.gorani_samjichang.art_critique.feedback.FeedbackEntity;
 import com.gorani_samjichang.art_critique.feedback.FeedbackRepository;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
+import com.gorani_samjichang.art_critique.study.InnerStudyCategory;
+import com.gorani_samjichang.art_critique.study.InnerStudyCategoryRepository;
+import com.gorani_samjichang.art_critique.study.InnerStudyField;
+import com.gorani_samjichang.art_critique.study.InnerStudyFieldRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -43,6 +47,8 @@ public class TestController {
     final WebClient.Builder webClientBuilder;
     final FeedbackRepository feedbackRepository;
     final CommentRepository commentRepository;
+    final InnerStudyCategoryRepository innerStudyCategoryRepository;
+    final InnerStudyFieldRepository innerStudyFieldRepository;
 
     @PostConstruct
     void makeMember() {
@@ -53,8 +59,20 @@ public class TestController {
             admin.addCredit(c2);
             creditRepository.save(c2);
             memberRepository.save(admin);
+
+            System.out.println(innerStudyFieldRepository.count());
+            if (innerStudyFieldRepository.count() == 0 && innerStudyCategoryRepository.count() == 0) {
+                InnerStudyField f = InnerStudyField.builder().categoryTitle("잘그리는 법").build();
+                innerStudyFieldRepository.save(f);
+                InnerStudyCategory c = InnerStudyCategory.builder().categoryName("빛과 그림자").categroyNum(1L).field(f).build();
+                f.addDetail(c);
+
+                innerStudyCategoryRepository.save(c);
+                innerStudyFieldRepository.save(f);
+            }
         }
     }
+
     @GetMapping("/hello")
     String hello() {
         return "hello!";
