@@ -48,17 +48,16 @@ public class StudyService {
 
     }
 
-    public List<StudyCommentDTO> getComments(String serialNumber) {
-        return commentRepository.getComments(serialNumber);
+    public List<StudyCommentDTO> getComments(int pageNumber) {
+        return commentRepository.getComments(PageRequest.of(pageNumber,6));
     }
 
-    public void writeComment(String contents, boolean isLike, String replyString, String userSerialNumber) {
+    public void writeComment(boolean isLike, String replyString, String userSerialNumber) {
         InnerContentsComment comment = InnerContentsComment.builder()
                 .comment(replyString)
                 .member(memberRepository.findBySerialNumber(userSerialNumber))
                 .likes(isLike)
                 .createdAt(LocalDateTime.now())
-                .content(innerContentsRepository.findBySerialNumber(contents).orElseThrow(() -> new CannotFindBySerialNumberException("contents not exists")))
                 .build();
         commentRepository.save(comment);
     }
@@ -190,7 +189,6 @@ public class StudyService {
         List<String> tags = innerContentsRepository.findAllTags();
         Collections.shuffle(tags);
         tagPool = tags.subList(0, Math.min(101, tags.size()));
-        System.out.println(tagPool);
     }
 
     public List<String> getTagsRandom(int amount) {

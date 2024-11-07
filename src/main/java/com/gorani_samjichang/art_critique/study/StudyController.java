@@ -31,14 +31,19 @@ public class StudyController {
         return studyService.categories();
     }
 
-    @GetMapping("/public/{categoryThread}")
-    public List<StudyCommentDTO> comments(@PathVariable String categoryThread) {
-        return studyService.getComments(categoryThread);
+    @GetMapping("/public/categoryThread")
+    public List<StudyCommentDTO> comments() {
+        return studyService.getComments(0);
+    }
+    @GetMapping("/public/categoryThread/{pageNumber}")
+    public List<StudyCommentDTO> comments(@PathVariable int pageNumber) {
+        return studyService.getComments(pageNumber);
     }
 
-    @PostMapping("/{categoryThread}")
-    public void addComment(@PathVariable String categoryThread, @RequestParam("islike") Boolean islike, @RequestParam("content") String content, @AuthenticationPrincipal CustomUserDetails userDetail) {
-        studyService.writeComment(categoryThread, islike, content, userDetail.getSerialNumber());
+
+    @PostMapping("/ctegoryThread")
+    public void addComment(@RequestParam("islike") Boolean islike, @RequestParam("content") String content, @AuthenticationPrincipal CustomUserDetails userDetail) {
+        studyService.writeComment(islike, content, userDetail.getSerialNumber());
     }
 
     @GetMapping("/public/categoryArticle/{studyField}/{studyCategory}/{level}")

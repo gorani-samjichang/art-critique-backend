@@ -16,4 +16,5 @@ public class StudyCommentDTO {
     private String memberProfile;
     private boolean isLike;
     private LocalDateTime createdAt;
+    private String content;
 }
