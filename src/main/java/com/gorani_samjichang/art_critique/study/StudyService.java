@@ -1,6 +1,7 @@
 package com.gorani_samjichang.art_critique.study;
 
 import com.gorani_samjichang.art_critique.common.CommonUtil;
+import com.gorani_samjichang.art_critique.common.exceptions.BadRequestException;
 import com.gorani_samjichang.art_critique.common.exceptions.CannotFindBySerialNumberException;
 import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
@@ -77,10 +78,11 @@ public class StudyService {
 
     @Transactional
     public void registerLikes(String serialNumber, String userSerialNumber) {
-        if (!likesRepository.existsByContentsSerialNumberAndMemberSerialNumber(serialNumber, userSerialNumber)) {
-            likesRepository.insertLikes(serialNumber, userSerialNumber);
-            innerContentsRepository.incrementLikes(serialNumber);
+        if (likesRepository.existsByContentsSerialNumberAndMemberSerialNumber(serialNumber, userSerialNumber)) {
+            throw new BadRequestException("already liked");
         }
+        likesRepository.insertLikes(serialNumber, userSerialNumber);
+        innerContentsRepository.incrementLikes(serialNumber);
     }
 
     public List<SimpleInnerContentDTO> findByTag(String tag) {
@@ -170,5 +172,13 @@ public class StudyService {
         dto.getArticleMetaData().setTags(innerContentsRepository.getTags(serialNumber));
         dto.setArticleContent(innerContentsRepository.findArticleContentBySerialNumber(serialNumber));
         return dto;
+    }
+
+    public String getCategoryName(Long fieldNum, Long subCategoryNum){
+        InnerStudyCategory category = studyCategoryRepository.findTopByCategroyNum(subCategoryNum).orElseThrow(()->new CannotFindBySerialNumberException("Category is not Exists"));
+        if(category.getField().getCategoryNumber().equals(fieldNum)){
+            return category.getCategoryName();
+        }
+        throw new CannotFindBySerialNumberException("study field is not Exists");
     }
 }

@@ -106,4 +106,9 @@ public class StudyController {
     public ContentsDetailResponseDTO getContentInfoWithDetails(@PathVariable String serialNumber) {
         return studyService.getContentInfoWithDetails(serialNumber);
     }
+
+    @GetMapping("/public/categoryName/{fieldSerialNumber}/{subCategorySerialNumber}")
+    public String getCategoryName(@PathVariable Long fieldSerialNumber, @PathVariable Long subCategorySerialNumber) {
+        return studyService.getCategoryName(fieldSerialNumber, subCategorySerialNumber);
+    }
 }
