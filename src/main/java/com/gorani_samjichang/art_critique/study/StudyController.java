@@ -27,7 +27,7 @@ public class StudyController {
     }
 
     @GetMapping("/public/category")
-    public List<InnerStudyField> categories() {
+    public List<InnerStudyFieldDTO> categories() {
         return studyService.categories();
     }
 
@@ -105,5 +105,15 @@ public class StudyController {
     @GetMapping("/articleContent/{serialNumber}")
     public ContentsDetailResponseDTO getContentInfoWithDetails(@PathVariable String serialNumber) {
         return studyService.getContentInfoWithDetails(serialNumber);
+    }
+
+    @GetMapping("/public/categoryName/{fieldSerialNumber}/{subCategorySerialNumber}")
+    public String getCategoryName(@PathVariable Long fieldSerialNumber, @PathVariable Long subCategorySerialNumber) {
+        return studyService.getCategoryName(fieldSerialNumber, subCategorySerialNumber);
+    }
+
+    @GetMapping("/recommmendTag/{amount}")
+    public List<String> getTagsRandom(@PathVariable int amount){
+        return studyService.getTagsRandom(amount);
     }
 }

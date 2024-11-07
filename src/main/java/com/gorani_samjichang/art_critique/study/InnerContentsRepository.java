@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,4 +64,7 @@ public interface InnerContentsRepository extends JpaRepository<InnerContentsEnti
     @Modifying
     @Query("UPDATE InnerContentsEntity c SET c.likes=c.likes+1 where c.serialNumber= :serialNumber")
     int incrementLikes(@Param("serialNumber") String serialNumber);
+
+    @Query("SELECT DISTINCT t FROM InnerContentsEntity i JOIN i.tags t")
+    List<String> findAllTags();
 }

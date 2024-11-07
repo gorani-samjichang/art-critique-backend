@@ -45,6 +45,12 @@ public class GlobalExceptionHandler {
     public String handleNoPermission(final NoPermissionException e) {
         return e.getMessage();
     }
+
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String BadRequestException(final BadRequestException e) {
+        return e.getMessage();
+    }
     // Todo: XUserNotFoundExceiptionHandler
     // Todo: BadFeeedbackRequest
     // Todo: UnsupportedEncodingException
