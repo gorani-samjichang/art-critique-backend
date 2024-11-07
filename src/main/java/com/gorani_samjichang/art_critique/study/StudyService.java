@@ -39,8 +39,9 @@ public class StudyService {
         return innerContentsRepository.findTop5ByOrderByLikesDesc(PageRequest.of(0, 5));
     }
 
-    public List<InnerStudyField> categories() {
-        return innerStudyFieldRepository.findAll();
+    public List<InnerStudyFieldDTO> categories() {
+        return innerStudyFieldRepository.findAll().stream().map(InnerStudyFieldDTO::new).toList();
+
     }
 
     public List<StudyCommentDTO> getComments(String serialNumber) {

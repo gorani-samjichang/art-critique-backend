@@ -27,7 +27,7 @@ public class StudyController {
     }
 
     @GetMapping("/public/category")
-    public List<InnerStudyField> categories() {
+    public List<InnerStudyFieldDTO> categories() {
         return studyService.categories();
     }
 
