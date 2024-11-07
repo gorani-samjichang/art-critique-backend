@@ -8,6 +8,7 @@ import com.gorani_samjichang.art_critique.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -30,6 +32,7 @@ public class StudyService {
     final InnerStudyCategoryRepository studyCategoryRepository;
     final InnerContentsDetailsRepository contentsDetailsRepository;
     final CommonUtil commonUtil;
+    private List<String> tagPool = new ArrayList<>();
 
     public List<InnerContentsDTO> RecentOrder() {
         Pageable pageable = PageRequest.of(0, 5);
@@ -174,11 +177,28 @@ public class StudyService {
         return dto;
     }
 
-    public String getCategoryName(Long fieldNum, Long subCategoryNum){
-        InnerStudyCategory category = studyCategoryRepository.findTopByCategroyNum(subCategoryNum).orElseThrow(()->new CannotFindBySerialNumberException("Category is not Exists"));
-        if(category.getField().getCategoryNumber().equals(fieldNum)){
+    public String getCategoryName(Long fieldNum, Long subCategoryNum) {
+        InnerStudyCategory category = studyCategoryRepository.findTopByCategroyNum(subCategoryNum).orElseThrow(() -> new CannotFindBySerialNumberException("Category is not Exists"));
+        if (category.getField().getCategoryNumber().equals(fieldNum)) {
             return category.getCategoryName();
         }
         throw new CannotFindBySerialNumberException("study field is not Exists");
+    }
+
+    @Scheduled(fixedRate = 1000 * 60 * 60 * 24)
+    public void updateTags() {
+        List<String> tags = innerContentsRepository.findAllTags();
+        Collections.shuffle(tags);
+        tagPool = tags.subList(0, Math.min(101, tags.size()));
+        System.out.println(tagPool);
+    }
+
+    public List<String> getTagsRandom(int amount) {
+        int poolSize = tagPool.size();
+        if (amount >= poolSize) {
+            return tagPool;
+        }
+        int startNum = (int) (Math.random() * (poolSize - amount + 1));
+        return tagPool.subList(startNum, startNum + amount);
     }
 }
