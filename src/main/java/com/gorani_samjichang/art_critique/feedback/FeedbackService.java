@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -49,29 +50,18 @@ public class FeedbackService {
     private String feedbackServerHost;
     final EmitterService emitterService;
     final CommentRepository commentRepository;
+    private List<FeedbackUrlDto> goodImages = new ArrayList<>();
 
-
-    String[] dummyTodayGoodImage = new String[]{
-            "https://picsum.photos/id/88/180/160",
-            "https://picsum.photos/id/51/200/200",
-            "https://picsum.photos/id/50/260/240",
-            "https://picsum.photos/id/9/180/160",
-            "https://picsum.photos/id/55/260/280",
-            "https://picsum.photos/id/70/220/220",
-            "https://picsum.photos/id/57/160/300",
-            "https://picsum.photos/id/19/300/120",
-            "https://picsum.photos/id/99/100/100",
-            "https://picsum.photos/id/26/300/260",
-            "https://picsum.photos/id/71/120/120",
-            "https://picsum.photos/id/69/160/160",
-            "https://picsum.photos/id/39/100/120",
-            "https://picsum.photos/id/27/240/160",
-            "https://picsum.photos/id/15/240/140"
-    };
+    @Scheduled(fixedRate = 1000 * 60 * 15)
+    public void checkGoodImages() {
+        goodImages = feedbackRepository.findGoodImage();
+    }
 
     List<FeedbackUrlDto> getGoodImage() {
-        List<FeedbackUrlDto> todayGoodImage = feedbackRepository.findGoodImage();
-        return todayGoodImage;
+        if(goodImages.size()<10){
+            checkGoodImages();
+        }
+        return goodImages;
     }
 
     public ResponseEntity<String> requestFeedback(
@@ -173,7 +163,7 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackRecentOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateNotOrderByCreatedAtDesc(uid, true,FeedbackState.FAIL,pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateNotOrderByCreatedAtDesc(uid, true, FeedbackState.FAIL, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
@@ -186,7 +176,7 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateNotOrderByTotalScoreDesc(uid, true,FeedbackState.FAIL, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateNotOrderByTotalScoreDesc(uid, true, FeedbackState.FAIL, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 

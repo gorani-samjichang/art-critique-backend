@@ -167,6 +167,9 @@ public class StudyService {
         InnerStudyCategory category = findCategory(requestDTO.getBigCategory(), requestDTO.getSmallCategory());
         List<String> fileNames = uploadImages(files);
         saveContent(userSerialNumber, fileNames, requestDTO, category);
+        if(tagPool.size()<101){
+            updateTags();
+        }
     }
 
     public ContentsDetailResponseDTO getContentInfoWithDetails(String serialNumber) {
