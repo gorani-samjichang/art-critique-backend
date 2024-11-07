@@ -11,7 +11,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -50,10 +49,10 @@ public class StudyService {
     }
 
     public List<StudyCommentDTO> getComments(int pageNumber) {
-        return commentRepository.getComments(PageRequest.of(pageNumber,6));
+        return commentRepository.getComments(PageRequest.of(pageNumber, 6));
     }
 
-    public void writeComment(boolean isLike, String replyString, String userSerialNumber) {
+    public WriteCommentResponseDTO writeComment(boolean isLike, String replyString, String userSerialNumber) {
         InnerContentsComment comment = InnerContentsComment.builder()
                 .comment(replyString)
                 .member(memberRepository.findBySerialNumber(userSerialNumber))
@@ -61,6 +60,13 @@ public class StudyService {
                 .createdAt(LocalDateTime.now())
                 .build();
         commentRepository.save(comment);
+        return WriteCommentResponseDTO.builder()
+                .like(isLike)
+                .memberName(comment.getMember().getNickname())
+                .memberProfile(comment.getMember().getProfile())
+                .content(replyString)
+                .createdAt(comment.getCreatedAt())
+                .build();
     }
 
     public List<InnerContentsCategoryDTO> getCategoryContents(long fieldNum, long subCategoryNum, Pageable page) {
@@ -168,7 +174,7 @@ public class StudyService {
         InnerStudyCategory category = findCategory(requestDTO.getBigCategory(), requestDTO.getSmallCategory());
         List<String> fileNames = uploadImages(files);
         saveContent(userSerialNumber, fileNames, requestDTO, category);
-        if(tagPool.size()<101){
+        if (tagPool.size() < 101) {
             updateTags();
         }
     }
@@ -204,14 +210,14 @@ public class StudyService {
         return tagPool.subList(startNum, startNum + amount);
     }
 
-    public List<InnerContentsCategoryDTO> tagArticleFinder(String tag, String level, int page){
-        if("all".equals(level)) {
+    public List<InnerContentsCategoryDTO> tagArticleFinder(String tag, String level, int page) {
+        if ("all".equals(level)) {
             return innerContentsRepository.searchInnerContentsWithTag(tag, PageRequest.of(page, 6));
         }
         return innerContentsRepository.searchInnerContentsWithTagAndLevel(tag, level, PageRequest.of(page, 6));
     }
 
-    public List<InnerContentsCategoryDTO> searchArticleWithMember(String memberSerialNumber, int page){
+    public List<InnerContentsCategoryDTO> searchArticleWithMember(String memberSerialNumber, int page) {
         return innerContentsRepository.searchWithMember(memberSerialNumber, PageRequest.of(page, 6));
     }
 }

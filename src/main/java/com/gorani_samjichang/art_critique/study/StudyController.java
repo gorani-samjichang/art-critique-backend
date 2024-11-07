@@ -42,8 +42,8 @@ public class StudyController {
 
 
     @PostMapping("/ctegoryThread")
-    public void addComment(@RequestParam("islike") Boolean islike, @RequestParam("content") String content, @AuthenticationPrincipal CustomUserDetails userDetail) {
-        studyService.writeComment(islike, content, userDetail.getSerialNumber());
+    public WriteCommentResponseDTO addComment(@RequestParam("islike") Boolean islike, @RequestParam("content") String content, @AuthenticationPrincipal CustomUserDetails userDetail) {
+        return studyService.writeComment(islike, content, userDetail.getSerialNumber());
     }
 
     @GetMapping("/public/categoryArticle/{studyField}/{studyCategory}/{level}")
