@@ -58,6 +58,9 @@ public class FeedbackService {
     }
 
     List<FeedbackUrlDto> getGoodImage() {
+        if(goodImages.size()<10){
+            checkGoodImages();
+        }
         return goodImages;
     }
 
