@@ -12,6 +12,7 @@ import lombok.*;
 @AllArgsConstructor
 public class InnerStudyCategory {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long categroyNum;
     private String categoryName;
 
