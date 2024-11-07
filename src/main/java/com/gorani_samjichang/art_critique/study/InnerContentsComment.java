@@ -22,10 +22,6 @@ public class InnerContentsComment {
     @JoinColumn(name = "uid", referencedColumnName = "serialNumber")
     private MemberEntity member;
 
-    @ManyToOne
-    @JoinColumn(name = "content", referencedColumnName = "serialNumber")
-    private InnerContentsEntity content;
-
     private String comment;
     private Boolean likes;
     private LocalDateTime createdAt;
