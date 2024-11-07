@@ -67,4 +67,17 @@ public interface InnerContentsRepository extends JpaRepository<InnerContentsEnti
 
     @Query("SELECT DISTINCT t FROM InnerContentsEntity i JOIN i.tags t")
     List<String> findAllTags();
+
+
+    @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsCategoryDTO" +
+            "(m.nickname, m.profile, i.createdAt, i.serialNumber, i.thumbnailUrl, " +
+            "i.likes,CASE WHEN i.level = 'newbie' THEN '입문' WHEN i.level = 'chobo' THEN '초보' WHEN i.level = 'intermediate' THEN '중수' WHEN i.level = 'gosu' THEN '고수' ELSE '미분류' END, i.title) from InnerContentsEntity i " +
+            "join i.author m join i.tags t where t= :tag and i.level = :level order by i.createdAt desc")
+    List<InnerContentsCategoryDTO> searchInnerContentsWithTagAndLevel(@Param("tag") String tag, @Param("level") String level, Pageable pageable);
+
+    @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsCategoryDTO" +
+            "(m.nickname, m.profile, i.createdAt, i.serialNumber, i.thumbnailUrl, " +
+            "i.likes,CASE WHEN i.level = 'newbie' THEN '입문' WHEN i.level = 'chobo' THEN '초보' WHEN i.level = 'intermediate' THEN '중수' WHEN i.level = 'gosu' THEN '고수' ELSE '미분류' END, i.title) from InnerContentsEntity i " +
+            "join i.author m join i.tags t where t= :tag order by i.createdAt desc")
+    List<InnerContentsCategoryDTO> searchInnerContentsWithTag(@Param("tag") String tag, Pageable pageable);
 }

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -201,5 +202,12 @@ public class StudyService {
         }
         int startNum = (int) (Math.random() * (poolSize - amount + 1));
         return tagPool.subList(startNum, startNum + amount);
+    }
+
+    public List<InnerContentsCategoryDTO> tagArticleFinder(String tag, String level, int page){
+        if("all".equals(level)) {
+            return innerContentsRepository.searchInnerContentsWithTag(tag, PageRequest.of(page, 6));
+        }
+        return innerContentsRepository.searchInnerContentsWithTagAndLevel(tag, level, PageRequest.of(page, 6));
     }
 }

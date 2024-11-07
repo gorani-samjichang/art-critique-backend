@@ -83,12 +83,12 @@ public class StudyController {
         studyService.registerLikes(serialNumber, userDetails.getSerialNumber());
     }
 
-    @GetMapping("/sameTagArticle/{tag}")
+    @GetMapping("/public/sameTagArticle/{tag}")
     public List<SimpleInnerContentDTO> sameTagArticle(@PathVariable String tag) {
         return studyService.findByTag(tag);
     }
 
-    @GetMapping("/sameCategoryArticle/{serialNumber}")
+    @GetMapping("/public/sameCategoryArticle/{serialNumber}")
     public List<SimpleInnerContentDTO> sameCategoryArticle(@PathVariable String serialNumber) {
         return studyService.findSameCategory(serialNumber);
     }
@@ -120,5 +120,10 @@ public class StudyController {
     @GetMapping("/recommmendTag/{amount}")
     public List<String> getTagsRandom(@PathVariable int amount){
         return studyService.getTagsRandom(amount);
+    }
+
+    @GetMapping("/public/tagArticle/{tag}/{level}/{page}")
+    public  List<InnerContentsCategoryDTO> tagArticleFinder(@PathVariable String tag, @PathVariable String level, @PathVariable int page) {
+        return studyService.tagArticleFinder(tag, level, page);
     }
 }
