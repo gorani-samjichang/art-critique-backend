@@ -126,4 +126,9 @@ public class StudyController {
     public  List<InnerContentsCategoryDTO> tagArticleFinder(@PathVariable String tag, @PathVariable String level, @PathVariable int page) {
         return studyService.tagArticleFinder(tag, level, page);
     }
+
+    @GetMapping("/myArticle/{page}")
+    public List<InnerContentsCategoryDTO> myArticleFinder(@PathVariable int page,@AuthenticationPrincipal CustomUserDetails userDetails ) {
+        return studyService.searchArticleWithMember(userDetails.getSerialNumber(), page);
+    }
 }

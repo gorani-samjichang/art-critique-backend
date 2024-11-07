@@ -80,4 +80,10 @@ public interface InnerContentsRepository extends JpaRepository<InnerContentsEnti
             "i.likes,CASE WHEN i.level = 'newbie' THEN '입문' WHEN i.level = 'chobo' THEN '초보' WHEN i.level = 'intermediate' THEN '중수' WHEN i.level = 'gosu' THEN '고수' ELSE '미분류' END, i.title) from InnerContentsEntity i " +
             "join i.author m join i.tags t where t= :tag order by i.createdAt desc")
     List<InnerContentsCategoryDTO> searchInnerContentsWithTag(@Param("tag") String tag, Pageable pageable);
+
+    @Query("select new com.gorani_samjichang.art_critique.study.InnerContentsCategoryDTO" +
+            "(m.nickname, m.profile, i.createdAt, i.serialNumber, i.thumbnailUrl, " +
+            "i.likes,CASE WHEN i.level = 'newbie' THEN '입문' WHEN i.level = 'chobo' THEN '초보' WHEN i.level = 'intermediate' THEN '중수' WHEN i.level = 'gosu' THEN '고수' ELSE '미분류' END, i.title) from InnerContentsEntity i " +
+            "join i.author m where m.serialNumber= :serialNumber order by i.createdAt desc")
+    List<InnerContentsCategoryDTO> searchWithMember(@Param("serialNumber") String serialNumber, Pageable pageable);
 }

@@ -210,4 +210,8 @@ public class StudyService {
         }
         return innerContentsRepository.searchInnerContentsWithTagAndLevel(tag, level, PageRequest.of(page, 6));
     }
+
+    public List<InnerContentsCategoryDTO> searchArticleWithMember(String memberSerialNumber, int page){
+        return innerContentsRepository.searchWithMember(memberSerialNumber, PageRequest.of(page, 6));
+    }
 }
