@@ -117,7 +117,7 @@ public class StudyController {
         return studyService.getCategoryName(fieldSerialNumber, subCategorySerialNumber);
     }
 
-    @GetMapping("/recommmendTag/{amount}")
+    @GetMapping("/public/recommmendTag/{amount}")
     public List<String> getTagsRandom(@PathVariable int amount){
         return studyService.getTagsRandom(amount);
     }
