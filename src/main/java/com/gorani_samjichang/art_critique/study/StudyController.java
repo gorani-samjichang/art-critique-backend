@@ -96,7 +96,7 @@ public class StudyController {
     @PostMapping("/makeContent")
     public void makeStudyContent(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestPart(value = "ImageFileList") List<MultipartFile> imageFileList,
                                  @RequestPart(value = "Content") String contentJson) {
-        System.out.println(userDetails.getSerialNumber());
+        System.out.println(contentJson);
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             ContentRequestDTO contentRequestDTO = objectMapper.readValue(contentJson, ContentRequestDTO.class);
