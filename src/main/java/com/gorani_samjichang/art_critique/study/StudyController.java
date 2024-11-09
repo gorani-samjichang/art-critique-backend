@@ -108,8 +108,8 @@ public class StudyController {
     }
 
     @GetMapping("/articleContent/{serialNumber}")
-    public ContentsDetailResponseDTO getContentInfoWithDetails(@PathVariable String serialNumber) {
-        return studyService.getContentInfoWithDetails(serialNumber);
+    public ContentsDetailResponseDTO getContentInfoWithDetails(@PathVariable String serialNumber, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return studyService.getContentInfoWithDetails(serialNumber, userDetails.getSerialNumber());
     }
 
     @GetMapping("/public/categoryName/{fieldSerialNumber}/{subCategorySerialNumber}")
@@ -130,5 +130,15 @@ public class StudyController {
     @GetMapping("/myArticle/{page}")
     public List<InnerContentsCategoryDTO> myArticleFinder(@PathVariable int page,@AuthenticationPrincipal CustomUserDetails userDetails ) {
         return studyService.searchArticleWithMember(userDetails.getSerialNumber(), page);
+    }
+
+    @GetMapping("/myArticleInfo")
+    public ArticleInfoDTO myArticleInfo(@AuthenticationPrincipal CustomUserDetails userDetails){
+        return studyService.analyzeArticleInfo(userDetails.getSerialNumber());
+    }
+
+    @DeleteMapping("/myArticle/{serialNumber}")
+    public void deleteArticle(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable String serialNumber){
+        studyService.deleteArticle(userDetails.getSerialNumber(), serialNumber);
     }
 }

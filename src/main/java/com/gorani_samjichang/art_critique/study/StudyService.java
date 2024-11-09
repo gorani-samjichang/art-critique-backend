@@ -32,6 +32,7 @@ public class StudyService {
     final InnerStudyCategoryRepository studyCategoryRepository;
     final InnerContentsDetailsRepository contentsDetailsRepository;
     final CommonUtil commonUtil;
+    private final InnerContentsLikesRepository innerContentsLikesRepository;
     private List<String> tagPool = new ArrayList<>();
 
     public List<InnerContentsDTO> RecentOrder() {
@@ -179,10 +180,14 @@ public class StudyService {
         }
     }
 
-    public ContentsDetailResponseDTO getContentInfoWithDetails(String serialNumber) {
+    public ContentsDetailResponseDTO getContentInfoWithDetails(String serialNumber, String userSerialNumber) {
         ContentsDetailResponseDTO dto = innerContentsRepository.searchWithSerialNumberToContentsDetailResponseDTOWithoutDetails(serialNumber).orElseThrow(() -> new CannotFindBySerialNumberException("No article"));
+        if(null != dto.getDeletedAt()){
+            throw new BadRequestException("Deleted Contents are not allowed");
+        }
         dto.getArticleMetaData().setTags(innerContentsRepository.getTags(serialNumber));
         dto.setArticleContent(innerContentsRepository.findArticleContentBySerialNumber(serialNumber));
+        dto.getArticleMetaData().setAlreadyLike(innerContentsLikesRepository.existsByContentsSerialNumberAndMemberSerialNumber(serialNumber,userSerialNumber));
         return dto;
     }
 
@@ -219,5 +224,16 @@ public class StudyService {
 
     public List<InnerContentsCategoryDTO> searchArticleWithMember(String memberSerialNumber, int page) {
         return innerContentsRepository.searchWithMember(memberSerialNumber, PageRequest.of(page, 6));
+    }
+    public ArticleInfoDTO analyzeArticleInfo(String memberSerialNumber){
+        ArticleInfoDTO dto = innerContentsRepository.analyzeInfoOf(memberSerialNumber);
+        dto.setTags(innerContentsRepository.findAllTagsOfMember(memberSerialNumber));
+        return dto;
+    }
+
+    public void deleteArticle(String memberSerialNumber, String contentSerialNumber){
+        InnerContentsEntity contentsEntity = innerContentsRepository.findBySerialNumberAndAuthorSerialNumberAndDeletedAtIsNull(contentSerialNumber, memberSerialNumber).orElseThrow(()->new CannotFindBySerialNumberException("No article found"));
+        contentsEntity.setDeletedAt(LocalDateTime.now());
+        innerContentsRepository.save(contentsEntity);
     }
 }

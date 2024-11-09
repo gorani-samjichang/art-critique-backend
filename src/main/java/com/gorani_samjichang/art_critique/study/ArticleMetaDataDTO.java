@@ -21,4 +21,5 @@ public class ArticleMetaDataDTO {
     private Long view;
     private Long like;
     private List<String> tags;
+    private boolean alreadyLike;
 }
