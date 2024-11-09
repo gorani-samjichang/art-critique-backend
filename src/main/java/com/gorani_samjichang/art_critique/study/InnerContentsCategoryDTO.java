@@ -20,4 +20,5 @@ public class InnerContentsCategoryDTO {
     private Long like;
     private String level;
     private String title;
+    private Long view;
 }

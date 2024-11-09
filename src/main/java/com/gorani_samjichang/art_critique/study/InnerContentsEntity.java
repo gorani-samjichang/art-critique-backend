@@ -36,4 +36,6 @@ public class InnerContentsEntity {
 
     @ManyToOne
     private InnerStudyCategory subCategory;
+
+    private LocalDateTime deletedAt;
 }
