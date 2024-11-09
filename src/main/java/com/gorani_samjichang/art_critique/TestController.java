@@ -119,8 +119,8 @@ public class TestController {
                 innerStudyFieldRepository.save(field);
                 for (String j : categoryList[i]) {
                     InnerStudyCategory category = InnerStudyCategory.builder().categoryName(j).field(field).build();
-                    field.addDetail(category);
                     innerStudyCategoryRepository.save(category);
+                    field.addDetail(category);
                 }
                 innerStudyFieldRepository.save(field);
             }
