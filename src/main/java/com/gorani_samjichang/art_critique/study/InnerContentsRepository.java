@@ -85,7 +85,7 @@ public interface InnerContentsRepository extends JpaRepository<InnerContentsEnti
             "join i.author m where m.serialNumber= :serialNumber and i.deletedAt is null order by i.createdAt desc")
     List<InnerContentsCategoryDTO> searchWithMember(@Param("serialNumber") String serialNumber, Pageable pageable);
 
-    @Query("select new com.gorani_samjichang.art_critique.study.ArticleInfoDTO(count(c), sum(c.view), sum(c.likes), null) from InnerContentsEntity c join c.author m where m.serialNumber = :serialNumber and c.deletedAt is null")
+    @Query("select new com.gorani_samjichang.art_critique.study.ArticleInfoDTO(count(c), sum(c.view), sum(c.likes)) from InnerContentsEntity c join c.author m where m.serialNumber = :serialNumber and c.deletedAt is null")
     ArticleInfoDTO analyzeInfoOf(@Param("serialNumber") String serialNumber);
 
     @Query("select distinct t from InnerContentsEntity c join c.author m join c.tags t where m.serialNumber= :serialNumber and c.deletedAt is null")
