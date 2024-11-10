@@ -235,5 +235,8 @@ public class StudyService {
         InnerContentsEntity contentsEntity = innerContentsRepository.findBySerialNumberAndAuthorSerialNumberAndDeletedAtIsNull(contentSerialNumber, memberSerialNumber).orElseThrow(()->new CannotFindBySerialNumberException("No article found"));
         contentsEntity.setDeletedAt(LocalDateTime.now());
         innerContentsRepository.save(contentsEntity);
+        if (tagPool.size() < 101) {
+            updateTags();
+        }
     }
 }
