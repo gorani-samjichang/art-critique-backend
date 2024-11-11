@@ -56,12 +56,6 @@ public class StudyController {
 
     @GetMapping("/public/categoryArticle/{studyField}/{studyCategory}/{level}/{page}")
     public List<InnerContentsCategoryDTO> getStudyDetails(@PathVariable Long studyField, @PathVariable Long studyCategory, @PathVariable String level, @PathVariable Integer page) {
-        // 너무 빠르면 스크롤에 의한 추가 로딩이 실험이 안되서 넣은 임시 코드 지워야 됨
-        try {
-            Thread.sleep(2000); // 1초 동안 멈춤
-        } catch (InterruptedException e) {
-            e.printStackTrace(); // 예외 처리
-        }
         if ("all".equals(level)) {
             return studyService.getCategoryContents(studyField, studyCategory, PageRequest.of(page, 6));
         }
@@ -96,14 +90,12 @@ public class StudyController {
     @PostMapping("/makeContent")
     public void makeStudyContent(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestPart(value = "ImageFileList") List<MultipartFile> imageFileList,
                                  @RequestPart(value = "Content") String contentJson) {
-        System.out.println(userDetails.getSerialNumber());
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             ContentRequestDTO contentRequestDTO = objectMapper.readValue(contentJson, ContentRequestDTO.class);
-            System.out.println(contentRequestDTO);
             studyService.makeContent(userDetails.getSerialNumber(), imageFileList, contentRequestDTO);
         } catch (Exception e) {
-            System.out.println("!!!" + e + "!!!");
+//            System.out.println("!!!" + e + "!!!");
         }
     }
 
