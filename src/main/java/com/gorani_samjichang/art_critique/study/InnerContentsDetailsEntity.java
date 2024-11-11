@@ -18,6 +18,7 @@ public class InnerContentsDetailsEntity {
     @ManyToOne
     @JoinColumn(name = "contents_id")
     private InnerContentsEntity innerContents;
+    @Column(columnDefinition = "TEXT")
     private String content;
     private String type;
 

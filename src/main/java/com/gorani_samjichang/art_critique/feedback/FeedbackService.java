@@ -16,6 +16,7 @@ import com.gorani_samjichang.art_critique.member.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +38,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FeedbackService {
     private final FeedbackRepository feedbackRepository;
     private static final int PAGE_SIZE = 4;
@@ -113,7 +115,7 @@ public class FeedbackService {
                     memberRepository.save(me);
                 })
                 .doOnNext(pythonResponse -> {
-                    System.out.println(pythonResponse.toString());
+                    log.debug(pythonResponse.toString());
                     try {
                         for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
                             fre.setFeedbackEntity(feedbackEntity);
@@ -131,10 +133,10 @@ public class FeedbackService {
                         creditUsedHistoryRepository.save(historyEntity);
                         feedbackRepository.save(feedbackEntity);
                     } catch (NullPointerException e) {
-                        System.out.println("null point exception 발생");
+                        log.warn("null point exception 발생");
                     } catch (Exception e) {
-                        System.out.println(e.getCause());
-                        System.out.println(e.getMessage());
+                        log.warn(e.getCause().getMessage());
+                        log.warn(e.getMessage());
                     }
                 })
                 .subscribe();
@@ -169,7 +171,6 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
         LocalDateTime oneYearAgo = LocalDateTime.now().minus(1, ChronoUnit.YEARS);
-        System.out.println(oneYearAgo);
         List<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateAndCreatedAtAfterOrderByCreatedAtAsc(uid, true, "COMPLETED", oneYearAgo);
         return convertFeedbackEntityToDto(feedbackEntities);
     }

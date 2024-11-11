@@ -3,8 +3,6 @@ package com.gorani_samjichang.art_critique;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.feedback.CommentRepository;
-import com.gorani_samjichang.art_critique.feedback.FeedbackCommentEntity;
-import com.gorani_samjichang.art_critique.feedback.FeedbackEntity;
 import com.gorani_samjichang.art_critique.feedback.FeedbackRepository;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
@@ -13,6 +11,7 @@ import com.gorani_samjichang.art_critique.study.InnerStudyCategoryRepository;
 import com.gorani_samjichang.art_critique.study.InnerStudyField;
 import com.gorani_samjichang.art_critique.study.InnerStudyFieldRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
@@ -27,19 +27,16 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/test")
 @RequiredArgsConstructor
+@Slf4j
 public class TestController {
     final MemberRepository memberRepository;
     final CreditRepository creditRepository;
@@ -52,7 +49,7 @@ public class TestController {
 
     @PostConstruct
     void makeMember() {
-        if(!memberRepository.existsByEmail("admin@aa.aa")) {
+        if (!memberRepository.existsByEmail("admin@aa.aa")) {
             MemberEntity admin = MemberEntity.builder().email("admin@aa.aa").password("$2a$10$1cYjz6/0YN2yfme968RxPOA34BF9KAx4nMDVD3GWqLDsXJnx0j2Yu").open(true).serialNumber("e22e1-22r3f3f133-f14f4f4").isDeleted(false).credit(2).nickname("admin").role("ROLE_ADMIN").isDeleted(false).build();
             memberRepository.save(admin);
             CreditEntity c2 = CreditEntity.builder().memberEntity(admin).state("VALID").purchaseDate(LocalDateTime.now().minusMinutes(5)).expireDate(LocalDateTime.now().plusMonths(2).minusMinutes(5)).type("PREPAYMENT").remainAmount(2).purchaseAmount(2).usedAmount(0).build();
@@ -60,15 +57,16 @@ public class TestController {
             creditRepository.save(c2);
             memberRepository.save(admin);
         }
+        log.info("{}개의 스터디 필드가 존재", innerStudyFieldRepository.count());
         if (innerStudyFieldRepository.count() == 0 && innerStudyCategoryRepository.count() == 0) {
-            String [] fieldList = {
+            String[] fieldList = {
                     "좋은 드로잉을 위한 기본, 자세와 선",
                     "사실적인 드로잉을 위해 면과 명암을 다루는 기술",
                     "드로잉에서 가장 중요한 관찰의 원리와 올바른 관찰법",
                     "효과적이고 완벽한 드로잉을 위한 계측과 평면화",
                     "실전 드로잉을 위한 핵심 기법들"
             };
-            String [] [] categoryList = {
+            String[][] categoryList = {
                     {
                             "자신에게 숨겨져 있는 드로잉 본능을 꺼내라",
                             "다양한 드로잉의 세상",
@@ -143,7 +141,7 @@ public class TestController {
                 }
                 emitter.complete();
             } catch (IOException | InterruptedException e) {
-                System.out.println("!!!");
+                log.warn("SseEmitter에서 발생!!! -- {}", e.getMessage());
             }
         });
         return emitter;
@@ -152,16 +150,27 @@ public class TestController {
     // http요청을 닫아주는 코드를 찾아서 추가할 필요가 있음
     @Value("${feedback.server.host}")
     String feedbackHost;
+
     @GetMapping("/feedbackServerCheck")
     public String feedbackServerCheck() {
-        System.out.println("파이썬 서버 점검 시작:" + feedbackHost);
+        log.info("파이썬 서버 점검 시작: {}", feedbackHost);
         String res = webClientBuilder.build()
                 .get()
                 .uri(feedbackHost + "/hello")
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> {
+                            return clientResponse.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        log.error("feedback server에 심각한 문제 발생: {}", errorBody);
+                                        return Mono.error(new RuntimeException("Error response: " + errorBody));
+                                    });
+                        })
                 .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(10))
+                .doFinally(signalType -> log.info("파이썬 서버 정상점검"))
                 .block();
-        System.out.println(res);
+        log.info("점검 결과: {}", res);
         return res;
     }
 
@@ -182,8 +191,9 @@ public class TestController {
             reader.readLine();
             line = reader.readLine();
             sb.append(line).append("\n");
-            String [] result = line.split("\\s+");
+            String[] result = line.split("\\s+");
             System.out.println(Arrays.toString(result));
+            log.info(Arrays.toString(result));
         } catch (Exception e) {
 //            e.printStackTrace();
         }
