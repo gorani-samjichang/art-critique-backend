@@ -6,6 +6,7 @@ import com.gorani_samjichang.art_critique.common.exceptions.CannotFindBySerialNu
 import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StudyService {
     final InnerContentsRepository innerContentsRepository;
     final InnerStudyFieldRepository innerStudyFieldRepository;
@@ -182,12 +184,12 @@ public class StudyService {
 
     public ContentsDetailResponseDTO getContentInfoWithDetails(String serialNumber, String userSerialNumber) {
         ContentsDetailResponseDTO dto = innerContentsRepository.searchWithSerialNumberToContentsDetailResponseDTOWithoutDetails(serialNumber).orElseThrow(() -> new CannotFindBySerialNumberException("No article"));
-        if(null != dto.getDeletedAt()){
+        if (null != dto.getDeletedAt()) {
             throw new BadRequestException("Deleted Contents are not allowed");
         }
         dto.getArticleMetaData().setTags(innerContentsRepository.getTags(serialNumber));
         dto.setArticleContent(innerContentsRepository.findArticleContentBySerialNumber(serialNumber));
-        dto.getArticleMetaData().setAlreadyLike(innerContentsLikesRepository.existsByContentsSerialNumberAndMemberSerialNumber(serialNumber,userSerialNumber));
+        dto.getArticleMetaData().setAlreadyLike(innerContentsLikesRepository.existsByContentsSerialNumberAndMemberSerialNumber(serialNumber, userSerialNumber));
         return dto;
     }
 
@@ -201,6 +203,7 @@ public class StudyService {
 
     @Scheduled(fixedRate = 1000 * 60 * 60 * 24)
     public void updateTags() {
+        log.info("tag updated");
         List<String> tags = innerContentsRepository.findAllTags();
         Collections.shuffle(tags);
         tagPool = tags.subList(0, Math.min(101, tags.size()));
@@ -225,14 +228,15 @@ public class StudyService {
     public List<InnerContentsCategoryDTO> searchArticleWithMember(String memberSerialNumber, int page) {
         return innerContentsRepository.searchWithMember(memberSerialNumber, PageRequest.of(page, 6));
     }
-    public ArticleInfoDTO analyzeArticleInfo(String memberSerialNumber){
+
+    public ArticleInfoDTO analyzeArticleInfo(String memberSerialNumber) {
         ArticleInfoDTO dto = innerContentsRepository.analyzeInfoOf(memberSerialNumber);
         dto.setTags(innerContentsRepository.findAllTagsOfMember(memberSerialNumber));
         return dto;
     }
 
-    public void deleteArticle(String memberSerialNumber, String contentSerialNumber){
-        InnerContentsEntity contentsEntity = innerContentsRepository.findBySerialNumberAndAuthorSerialNumberAndDeletedAtIsNull(contentSerialNumber, memberSerialNumber).orElseThrow(()->new CannotFindBySerialNumberException("No article found"));
+    public void deleteArticle(String memberSerialNumber, String contentSerialNumber) {
+        InnerContentsEntity contentsEntity = innerContentsRepository.findBySerialNumberAndAuthorSerialNumberAndDeletedAtIsNull(contentSerialNumber, memberSerialNumber).orElseThrow(() -> new CannotFindBySerialNumberException("No article found"));
         contentsEntity.setDeletedAt(LocalDateTime.now());
         innerContentsRepository.save(contentsEntity);
         if (tagPool.size() < 101) {
