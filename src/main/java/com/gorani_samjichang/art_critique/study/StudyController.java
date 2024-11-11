@@ -3,6 +3,7 @@ package com.gorani_samjichang.art_critique.study;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/study")
 @RequiredArgsConstructor
+@Slf4j
 public class StudyController {
     final StudyService studyService;
 
@@ -35,6 +37,7 @@ public class StudyController {
     public List<StudyCommentDTO> comments() {
         return studyService.getComments(0);
     }
+
     @GetMapping("/public/categoryThread/{pageNumber}")
     public List<StudyCommentDTO> comments(@PathVariable int pageNumber) {
         return studyService.getComments(pageNumber);
@@ -95,7 +98,7 @@ public class StudyController {
             ContentRequestDTO contentRequestDTO = objectMapper.readValue(contentJson, ContentRequestDTO.class);
             studyService.makeContent(userDetails.getSerialNumber(), imageFileList, contentRequestDTO);
         } catch (Exception e) {
-//            System.out.println("!!!" + e + "!!!");
+            log.error("컨텐츠 생성 실패, {}", contentJson);
         }
     }
 
@@ -109,28 +112,28 @@ public class StudyController {
         return studyService.getCategoryName(fieldSerialNumber, subCategorySerialNumber);
     }
 
-    @GetMapping("/recommmendTag/{amount}")
-    public List<String> getTagsRandom(@PathVariable int amount){
+    @GetMapping("/public/recommmendTag/{amount}")
+    public List<String> getTagsRandom(@PathVariable int amount) {
         return studyService.getTagsRandom(amount);
     }
 
     @GetMapping("/public/tagArticle/{tag}/{level}/{page}")
-    public  List<InnerContentsCategoryDTO> tagArticleFinder(@PathVariable String tag, @PathVariable String level, @PathVariable int page) {
+    public List<InnerContentsCategoryDTO> tagArticleFinder(@PathVariable String tag, @PathVariable String level, @PathVariable int page) {
         return studyService.tagArticleFinder(tag, level, page);
     }
 
     @GetMapping("/myArticle/{page}")
-    public List<InnerContentsCategoryDTO> myArticleFinder(@PathVariable int page,@AuthenticationPrincipal CustomUserDetails userDetails ) {
+    public List<InnerContentsCategoryDTO> myArticleFinder(@PathVariable int page, @AuthenticationPrincipal CustomUserDetails userDetails) {
         return studyService.searchArticleWithMember(userDetails.getSerialNumber(), page);
     }
 
     @GetMapping("/myArticleInfo")
-    public ArticleInfoDTO myArticleInfo(@AuthenticationPrincipal CustomUserDetails userDetails){
+    public ArticleInfoDTO myArticleInfo(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return studyService.analyzeArticleInfo(userDetails.getSerialNumber());
     }
 
     @DeleteMapping("/myArticle/{serialNumber}")
-    public void deleteArticle(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable String serialNumber){
+    public void deleteArticle(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable String serialNumber) {
         studyService.deleteArticle(userDetails.getSerialNumber(), serialNumber);
     }
 }
