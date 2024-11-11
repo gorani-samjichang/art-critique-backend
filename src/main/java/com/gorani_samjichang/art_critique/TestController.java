@@ -56,9 +56,8 @@ public class TestController {
             admin.addCredit(c2);
             creditRepository.save(c2);
             memberRepository.save(admin);
-
-            log.info("{}개의 스터디 필드가 존재", innerStudyFieldRepository.count());
         }
+        log.info("{}개의 스터디 필드가 존재", innerStudyFieldRepository.count());
         if (innerStudyFieldRepository.count() == 0 && innerStudyCategoryRepository.count() == 0) {
             String[] fieldList = {
                     "좋은 드로잉을 위한 기본, 자세와 선",
@@ -122,8 +121,6 @@ public class TestController {
                     field.addDetail(category);
                 }
                 innerStudyFieldRepository.save(field);
-
-
             }
         }
     }

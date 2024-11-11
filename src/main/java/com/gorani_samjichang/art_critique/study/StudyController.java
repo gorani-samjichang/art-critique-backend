@@ -113,7 +113,7 @@ public class StudyController {
     }
 
     @GetMapping("/public/recommmendTag/{amount}")
-    public List<String> getTagsRandom(@PathVariable int amount) {
+    public List<String> getTagsRandom(@PathVariable int amount){
         return studyService.getTagsRandom(amount);
     }
 
