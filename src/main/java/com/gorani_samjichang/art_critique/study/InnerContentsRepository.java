@@ -92,4 +92,7 @@ public interface InnerContentsRepository extends JpaRepository<InnerContentsEnti
     List<String> findAllTagsOfMember(@Param("serialNumber")String serialNumber);
 
     Optional<InnerContentsEntity> findBySerialNumberAndAuthorSerialNumberAndDeletedAtIsNull(@Param("serialNumber") String serialNumber, @Param("authorSerialNumber") String authorSerialNumber);
+
+    @Query("select count(c.cid) from InnerContentsEntity c join c.author m where m.uid=1")
+    Long getAdminArticleCount();
 }
