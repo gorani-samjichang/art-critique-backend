@@ -65,7 +65,7 @@ public class ExternalStudyContentsRegister {
         return listObjectsV2Response.contents();
     }
 
-    @PostConstruct
+//    @PostConstruct
     public void onStartup() {
         stamp = externalStudyContentsRepository.getStamp().orElse(0L);
         jsonStamp = innerContentsRepository.getAdminArticleCount();
@@ -121,7 +121,7 @@ public class ExternalStudyContentsRegister {
         return beforeContent;
     }
 
-    @Scheduled(fixedDelay = 60 * 60 * 1000 * 2)
+//    @Scheduled(fixedDelay = 60 * 60 * 1000 * 2)
     public void register() {
         List<S3Object> tsv_files = readS3("tsv/");
         long max_stamp = stamp;
@@ -147,7 +147,7 @@ public class ExternalStudyContentsRegister {
         stamp = max_stamp;
     }
 
-    @Scheduled(fixedDelay = 1000 * 2 * 60 * 60)
+//    @Scheduled(fixedDelay = 1000 * 2 * 60 * 60)
     public void innerContentsFilesToDB() {
         while (jsonStamp >= 0) {
             try {
@@ -155,6 +155,7 @@ public class ExternalStudyContentsRegister {
                 jsonStamp++;
             } catch (Exception e) {
                 log.info("{}번째 파일이 없거나 양식이 맞지 않습니다", jsonStamp);
+                e.printStackTrace();
                 break;
             }
         }
@@ -178,6 +179,7 @@ public class ExternalStudyContentsRegister {
             log.info("{} file 읽기 완료", key);
             return sb.toString();
         } catch (Exception e) {
+            e.printStackTrace();
             throw e;
         }
     }
@@ -209,6 +211,7 @@ public class ExternalStudyContentsRegister {
                 .build();
         innerContentsRepository.save(innerContentsEntity);
         InnerContentsDetailsEntity detail;
+        index = 0;
         for (ArticleContent article : requestDTO.getArticleContent()) {
             if ("img".equals(article.getType())) {
                 article.setContent(fileNames.get(index));
@@ -221,6 +224,6 @@ public class ExternalStudyContentsRegister {
                     .build();
             innerContentsDetailsRepository.save(detail);
         }
-
+        log.info("{} 저장 완료...", dataJson.getContent().getArticleTitle());
     }
 }
