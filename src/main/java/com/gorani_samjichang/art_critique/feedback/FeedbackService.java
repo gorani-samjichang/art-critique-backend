@@ -1,5 +1,9 @@
 package com.gorani_samjichang.art_critique.feedback;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.BadFeedbackRequestException;
@@ -13,8 +17,12 @@ import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryRepository;
 import com.gorani_samjichang.art_critique.member.CustomUserDetails;
 import com.gorani_samjichang.art_critique.member.MemberEntity;
 import com.gorani_samjichang.art_critique.member.MemberRepository;
+import com.gorani_samjichang.art_critique.study.ExternalStudyContentsRepository;
+import com.gorani_samjichang.art_critique.study.StudyInfoDTO;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,9 +40,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +59,7 @@ public class FeedbackService {
     final EmitterService emitterService;
     final CommentRepository commentRepository;
     private List<FeedbackUrlDto> goodImages = new ArrayList<>();
+    final ExternalStudyContentsRepository externalStudyContentsRepository;
 
     @Scheduled(fixedRate = 1000 * 60 * 15)
     public void checkGoodImages() {
@@ -60,7 +67,7 @@ public class FeedbackService {
     }
 
     List<FeedbackUrlDto> getGoodImage() {
-        if(goodImages.size()<10){
+        if (goodImages.size() < 10) {
             checkGoodImages();
         }
         return goodImages;
@@ -119,6 +126,9 @@ public class FeedbackService {
                     try {
                         for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
                             fre.setFeedbackEntity(feedbackEntity);
+                            if ("evaluation".equals(fre.getFeedbackType())) {
+                                feedbackResultsEvaluationLinkAdd(fre);
+                            }
                         }
                         commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
                         LocalDateTime NOW = LocalDateTime.now();
@@ -142,6 +152,55 @@ public class FeedbackService {
                 .subscribe();
 
         return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
+    }
+
+    public void feedbackResultsEvaluationLinkAdd(FeedbackResultEntity feedbackResultEntity) {
+        @AllArgsConstructor
+        @Getter
+        class CategoryScore {
+            public String key;
+            public int score;
+        }
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            List<FeedbackResultJSON> evaluationResults = objectMapper.readValue(feedbackResultEntity.getFeedbackContent(), new TypeReference<List<FeedbackResultJSON>>() {
+            });
+            for (FeedbackResultJSON data : evaluationResults) {
+                PriorityQueue<CategoryScore> pq = new PriorityQueue<>(Comparator.comparingInt(CategoryScore::getScore));
+                for (FeedbackResultJSON.Evaluation evaluation : data.getEvaluations()) {
+                    String name = evaluation.getName();
+                    String namePart = name.contains("(") ? name.split("\\(")[0] + "~" : name;
+                    pq.add(new CategoryScore(String.format("%s:%s", data.getCategory(), namePart), evaluation.getScore()));
+                }
+                List<StudyInfoDTO> studies = new ArrayList<>(3);
+                studies.add(null);studies.add(null);studies.add(null);
+                int idx = 0;
+                while (!pq.isEmpty()) {
+                    CategoryScore cs = pq.poll();
+                    if (cs.getScore() >= 90) break;
+                    int count = externalStudyContentsRepository.countStudies(cs.getKey());
+                    if (count == 0) continue;
+                    int rand = (int) (Math.random() * count) / (3 - idx);
+                    int j = 0;
+                    for (StudyInfoDTO study : externalStudyContentsRepository.getStudies(cs.getKey(), PageRequest.of(rand, 3 - idx))) {
+                        if(j+idx == 3) break;
+                        studies.set(idx + j, study);
+                        j++;
+                    }
+                    idx++;
+                    if (idx == 3) break;
+                }
+                if (!studies.isEmpty() && studies.get(studies.size() - 1) == null) {
+                    studies.remove(studies.size() - 1);
+                }
+                data.setStudies(studies);
+            }
+
+            feedbackResultEntity.setFeedbackContent(objectMapper.writeValueAsString(evaluationResults));
+        } catch (Exception e) {
+            log.warn("python response가 양식이 이상함: {}", e.getMessage());
+        }
     }
 
     boolean feedbackReview(String serialNumber,
