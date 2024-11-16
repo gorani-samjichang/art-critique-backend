@@ -191,7 +191,7 @@ public class FeedbackService {
                     idx++;
                     if (idx == 3) break;
                 }
-                if (!studies.isEmpty() && studies.get(studies.size() - 1) == null) {
+                while (!studies.isEmpty() && studies.get(studies.size() - 1) == null) {
                     studies.remove(studies.size() - 1);
                 }
                 data.setStudies(studies);

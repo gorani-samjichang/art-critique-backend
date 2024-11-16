@@ -74,7 +74,7 @@ public class FeedbackController {
 
     @GetMapping(value = "/public/retrieve/{serialNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter retrieve(@PathVariable String serialNumber) {
-        SseEmitter emitter = new SseEmitter(100 * 1000L);
+        SseEmitter emitter = new SseEmitter(200 * 1000L);
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
 
@@ -112,7 +112,7 @@ public class FeedbackController {
                 Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
                 emitter.send(SseEmitter.event()
                         .name("pending")
-                        .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
+                        .data("{\"rate\":" + ((double)feedbackEntity.get().getProgressRate())/2 + "}")
                 );
                 feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
                 feedbackRepository.save(feedbackEntity.get());
@@ -132,7 +132,7 @@ public class FeedbackController {
                     );
                     emitter.complete();
                     executor.shutdown();
-                } else if (feedbackEntity.get().getProgressRate() > 100) {
+                } else if (feedbackEntity.get().getProgressRate() > 200) {
                     // 타임아웃이 왜 안되는지 모르겠어서 여기서 땜빵함
                     feedbackEntity.get().setState(FeedbackState.FAIL);
                     feedbackRepository.save(feedbackEntity.get());
