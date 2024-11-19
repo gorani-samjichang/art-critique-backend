@@ -124,12 +124,15 @@ public class FeedbackService {
                 .doOnNext(pythonResponse -> {
                     log.debug(pythonResponse.toString());
                     try {
-                        for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
-                            fre.setFeedbackEntity(feedbackEntity);
-                            if ("evaluation".equals(fre.getFeedbackType())) {
-                                feedbackResultsEvaluationLinkAdd(fre);
+                        if (FeedbackState.COMPLETED.equals(pythonResponse.getState())) {
+                            for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
+                                fre.setFeedbackEntity(feedbackEntity);
+                                if ("evaluation".equals(fre.getFeedbackType())) {
+                                    feedbackResultsEvaluationLinkAdd(fre);
+                                }
                             }
                         }
+
                         commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
                         LocalDateTime NOW = LocalDateTime.now();
                         feedbackEntity.setCreatedAt(NOW);
