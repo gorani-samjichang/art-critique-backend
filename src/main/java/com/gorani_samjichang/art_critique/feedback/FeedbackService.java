@@ -231,7 +231,15 @@ public class FeedbackService {
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
         LocalDateTime oneYearAgo = LocalDateTime.now().minus(1, ChronoUnit.YEARS);
         List<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateAndCreatedAtAfterOrderByCreatedAtAsc(uid, true, "COMPLETED", oneYearAgo);
-        return convertFeedbackEntityToDto(feedbackEntities);
+        List<FeedbackEntity> rtFeedbackEntities = new ArrayList<>();
+        int val=0;
+        for(FeedbackEntity feedback:feedbackEntities){
+            if(feedback.getTotalScore()>=val){
+                rtFeedbackEntities.add(feedback);
+                val=feedback.getTotalScore();
+            }
+        }
+        return convertFeedbackEntityToDto(rtFeedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
