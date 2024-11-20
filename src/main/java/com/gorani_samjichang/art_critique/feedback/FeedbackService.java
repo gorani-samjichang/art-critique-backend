@@ -25,6 +25,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,9 +41,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -103,6 +108,24 @@ public class FeedbackService {
         creditRepository.save(usedCredit);
         feedbackRepository.save(feedbackEntity);
         memberRepository.save(me);
+        
+        // progressRate가 1초마다 1씩 증가
+        // 피드백 서버의 요청이 끝나지 않았을 때 progressRate가 49까지 증가
+        // 피드백 서버의 요청이 끝나면 progressRate가 50으로 설정
+        // 이후 progressRate가 1초마다 1씩 증가
+        // 추천 학습 자료 추가 끝나지 않았을 때 progressRate가 99까지 증가
+        // 추천 학습 자료 추가가 끝나면 progressRate가 100으로 설정
+        AtomicInteger progressRate = new AtomicInteger(0);
+
+        Disposable feedbackProgressRateDisposable = Flux.interval(Duration.ofSeconds(1))
+                .takeWhile(i -> progressRate.get() < 49) // progressRate가 49 미만일 때만 실행
+                .doOnNext(tick -> {
+                    // progressRate가 49까지만 증가
+                    feedbackEntity.setProgressRate(progressRate.incrementAndGet());
+                    feedbackRepository.save(feedbackEntity);
+                })
+                .doOnComplete(() -> log.debug("Feedback progress rate increment completed"))
+                .subscribe();
 
         String jsonData = "{\"image_url\": " + "\"" + imageUrl + "\"}";
         webClientBuilder.build()
@@ -113,6 +136,8 @@ public class FeedbackService {
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
+                    feedbackProgressRateDisposable.dispose();
+
                     usedCredit.refundCredit();
                     feedbackEntity.setState(FeedbackState.FAIL);
                     LocalDateTime NOW = LocalDateTime.now();
@@ -124,13 +149,33 @@ public class FeedbackService {
                 .doOnNext(pythonResponse -> {
                     log.debug(pythonResponse.toString());
                     try {
+                        feedbackProgressRateDisposable.dispose();
+
                         if (FeedbackState.COMPLETED.equals(pythonResponse.getState())) {
+                            feedbackEntity.setProgressRate(50);
+                            feedbackRepository.save(feedbackEntity);
+
+                            progressRate.set(50);
+                            Disposable studyProgressRateDisposable = Flux.interval(Duration.ofSeconds(1))
+                                    .takeWhile(i -> progressRate.get() < 99) // progressRate가 99 미만일 때만 실행
+                                    .doOnNext(tick -> {
+                                        // progressRate가 99까지만 증가
+                                        feedbackEntity.setProgressRate(progressRate.incrementAndGet());
+                                        feedbackRepository.save(feedbackEntity);
+                                    })
+                                    .doOnComplete(() -> log.debug("Study progress rate increment completed"))
+                                    .subscribe();
+    
                             for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
                                 fre.setFeedbackEntity(feedbackEntity);
                                 if ("evaluation".equals(fre.getFeedbackType())) {
                                     feedbackResultsEvaluationLinkAdd(fre);
                                 }
                             }
+
+                            studyProgressRateDisposable.dispose();
+                            feedbackEntity.setProgressRate(100);
+                            feedbackRepository.save(feedbackEntity);
                         }
 
                         commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
@@ -152,6 +197,7 @@ public class FeedbackService {
                         log.warn(e.getMessage());
                     }
                 })
+                .timeout(Duration.ofSeconds(200))
                 .subscribe();
 
         return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
