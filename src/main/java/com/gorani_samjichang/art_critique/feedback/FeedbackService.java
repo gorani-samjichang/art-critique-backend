@@ -157,10 +157,12 @@ public class FeedbackService {
                         feedbackProgressRateDisposable.dispose();
 
                         if (FeedbackState.COMPLETED.equals(pythonResponse.getState())) {
+                            synchronized (progressRate) {
+                                progressRate.set(50);
+                            }
                             feedbackEntity.setProgressRate(50);
                             feedbackRepository.save(feedbackEntity);
 
-                            progressRate.set(50);
                             Disposable studyProgressRateDisposable = Flux.interval(Duration.ofSeconds(1))
                                     .takeWhile(i -> progressRate.get() < 99) // progressRate가 99 미만일 때만 실행
                                     .doOnNext(tick -> {
@@ -185,9 +187,10 @@ public class FeedbackService {
 
                             studyProgressRateDisposable.dispose();
                             synchronized (progressRate) {
-                                feedbackEntity.setProgressRate(100);
-                                feedbackRepository.save(feedbackEntity);
+                                progressRate.set(100);
                             }
+                            feedbackEntity.setProgressRate(100);
+                            feedbackRepository.save(feedbackEntity);
                         }
 
                         commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
