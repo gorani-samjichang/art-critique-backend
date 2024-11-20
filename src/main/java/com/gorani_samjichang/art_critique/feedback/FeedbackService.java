@@ -285,25 +285,25 @@ public class FeedbackService {
 
     public List<PastFeedbackDto> getFeedbackRecentOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateNotOrderByCreatedAtDesc(uid, true, FeedbackState.FAIL, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndStateNotOrderByCreatedAtDesc(uid, FeedbackState.FAIL, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackCreatedAtOrder(long uid, int page) {
         LocalDateTime oneYearAgo = LocalDateTime.now().minus(1, ChronoUnit.YEARS);
-        List<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateAndCreatedAtAfterOrderByCreatedAtAsc(uid, true, "COMPLETED", oneYearAgo);
+        List<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndStateAndCreatedAtAfterOrderByCreatedAtAsc(uid, "COMPLETED", oneYearAgo);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackTotalScoreOrder(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsHeadAndStateNotOrderByTotalScoreDesc(uid, true, FeedbackState.FAIL, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndStateNotOrderByTotalScoreDesc(uid, FeedbackState.FAIL, pageable);
         return convertFeedbackEntityToDto(feedbackEntities);
     }
 
     public List<PastFeedbackDto> getFeedbackBookmark(long uid, int page) {
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedAndIsHeadOrderByCreatedAtDesc(uid, true, true, pageable);
+        Slice<FeedbackEntity> feedbackEntities = feedbackRepository.findByMemberEntityUidAndIsBookmarkedOrderByCreatedAtDesc(uid, true, pageable);
 
         return convertFeedbackEntityToDto(feedbackEntities);
     }
