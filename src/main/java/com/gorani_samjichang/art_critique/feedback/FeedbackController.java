@@ -261,6 +261,9 @@ public class FeedbackController {
                 .doOnNext(pythonResponse -> {
                     for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
                         fre.setFeedbackEntity(newFeedbackEntity);
+                        if ("evaluation".equals(fre.getFeedbackType())) {
+                            feedbackService.feedbackResultsEvaluationLinkAdd(fre);
+                        }
                     }
                     commonUtil.copyNonNullProperties(pythonResponse, newFeedbackEntity);
                     LocalDateTime NOW = LocalDateTime.now();
