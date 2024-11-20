@@ -121,8 +121,13 @@ public class FeedbackService {
                 .takeWhile(i -> progressRate.get() < 49) // progressRate가 49 미만일 때만 실행
                 .doOnNext(tick -> {
                     // progressRate가 49까지만 증가
-                    feedbackEntity.setProgressRate(progressRate.incrementAndGet());
-                    feedbackRepository.save(feedbackEntity);
+                    synchronized (progressRate) {
+                        if (progressRate.get() >= 49) {
+                            return;
+                        }
+                        feedbackEntity.setProgressRate(progressRate.incrementAndGet());
+                        feedbackRepository.save(feedbackEntity);
+                    }
                 })
                 .doOnComplete(() -> log.debug("Feedback progress rate increment completed"))
                 .subscribe();
@@ -160,8 +165,13 @@ public class FeedbackService {
                                     .takeWhile(i -> progressRate.get() < 99) // progressRate가 99 미만일 때만 실행
                                     .doOnNext(tick -> {
                                         // progressRate가 99까지만 증가
-                                        feedbackEntity.setProgressRate(progressRate.incrementAndGet());
-                                        feedbackRepository.save(feedbackEntity);
+                                        synchronized (progressRate) {
+                                            if (progressRate.get() >= 99) {
+                                                return;
+                                            }
+                                            feedbackEntity.setProgressRate(progressRate.incrementAndGet());
+                                            feedbackRepository.save(feedbackEntity);
+                                        }
                                     })
                                     .doOnComplete(() -> log.debug("Study progress rate increment completed"))
                                     .subscribe();
@@ -174,8 +184,10 @@ public class FeedbackService {
                             }
 
                             studyProgressRateDisposable.dispose();
-                            feedbackEntity.setProgressRate(100);
-                            feedbackRepository.save(feedbackEntity);
+                            synchronized (progressRate) {
+                                feedbackEntity.setProgressRate(100);
+                                feedbackRepository.save(feedbackEntity);
+                            }
                         }
 
                         commonUtil.copyNonNullProperties(pythonResponse, feedbackEntity);
