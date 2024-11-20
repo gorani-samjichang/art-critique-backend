@@ -110,13 +110,13 @@ public class FeedbackController {
         executor.scheduleAtFixedRate(() -> {
             try {
                 Optional<FeedbackEntity> feedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-                emitter.send(SseEmitter.event()
-                        .name("pending")
-                        .data("{\"rate\":" + ((double)feedbackEntity.get().getProgressRate())/2 + "}")
-                );
-                feedbackEntity.get().setProgressRate(feedbackEntity.get().getProgressRate() + 1);
-                feedbackRepository.save(feedbackEntity.get());
-                if (feedbackEntity.get().getState().equals(FeedbackState.COMPLETED)) {
+                
+                if (feedbackEntity.get().getState().equals(FeedbackState.PENDING) || feedbackEntity.get().getState().equals(FeedbackState.NOT_STARTED)) {
+                    emitter.send(SseEmitter.event()
+                            .name("pending")
+                            .data("{\"rate\":" + ((double)feedbackEntity.get().getProgressRate())/2 + "}")
+                    );
+                } else if (feedbackEntity.get().getState().equals(FeedbackState.COMPLETED)) {
                     RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
                     emitter.send(SseEmitter.event()
                             .name("completed")
@@ -125,18 +125,6 @@ public class FeedbackController {
                     emitter.complete();
                     executor.shutdown();
                 } else if (feedbackEntity.get().getState().equals(FeedbackState.FAIL)) {
-                    RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
-                    emitter.send(SseEmitter.event()
-                            .name("fail")
-                            .data(dto)
-                    );
-                    emitter.complete();
-                    executor.shutdown();
-                } else if (feedbackEntity.get().getProgressRate() > 200) {
-                    // 타임아웃이 왜 안되는지 모르겠어서 여기서 땜빵함
-                    feedbackEntity.get().setState(FeedbackState.FAIL);
-                    feedbackRepository.save(feedbackEntity.get());
-
                     RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
                     emitter.send(SseEmitter.event()
                             .name("fail")
