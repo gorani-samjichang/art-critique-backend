@@ -3,6 +3,7 @@ package com.gorani_samjichang.art_critique.feedback;
 import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.S3Utils;
+import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
@@ -224,6 +225,9 @@ public class FeedbackController {
         creditRepository.save(usedCredit);
 
         Optional<FeedbackEntity> oldFeedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
+        if(!oldFeedbackEntity.get().getMemberEntity().getSerialNumber().equals(userDetails.getSerialNumber())) {
+            throw new NoPermissionException("You are not allowed to re-request.");
+        }
 
         String newSerialNumber = UUID.randomUUID().toString();
         String imageUrl = oldFeedbackEntity.get().getPictureUrl();
