@@ -230,35 +230,46 @@ public class FeedbackService {
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             List<FeedbackResultJSON> evaluationResults = objectMapper.readValue(feedbackResultEntity.getFeedbackContent(), new TypeReference<List<FeedbackResultJSON>>() {
             });
-            for (FeedbackResultJSON data : evaluationResults) {
-                PriorityQueue<CategoryScore> pq = new PriorityQueue<>(Comparator.comparingInt(CategoryScore::getScore));
-                for (FeedbackResultJSON.Evaluation evaluation : data.getEvaluations()) {
+            for (FeedbackResultJSON evaluationClass : evaluationResults) {
+                PriorityQueue<CategoryScore> priorityQueue = new PriorityQueue<>(Comparator.comparingInt(CategoryScore::getScore));
+                for (FeedbackResultJSON.Evaluation evaluation : evaluationClass.getEvaluations()) {
                     String name = evaluation.getName();
                     String namePart = name.contains("(") ? name.split("\\(")[0] + "~" : name;
-                    pq.add(new CategoryScore(String.format("%s:%s", data.getCategory(), namePart), evaluation.getScore()));
+                    priorityQueue.add(new CategoryScore(String.format("%s:%s", evaluationClass.getCategory(), namePart), evaluation.getScore()));
                 }
-                List<StudyInfoDTO> studies = new ArrayList<>(3);
-                studies.add(null);studies.add(null);studies.add(null);
-                int idx = 0;
-                while (!pq.isEmpty()) {
-                    CategoryScore cs = pq.poll();
-                    if (cs.getScore() >= 90) break;
-                    int count = externalStudyContentsRepository.countStudies(cs.getKey());
-                    if (count == 0) continue;
-                    int rand = (int) (Math.random() * count) / (3 - idx);
-                    int j = 0;
-                    for (StudyInfoDTO study : externalStudyContentsRepository.getStudies(cs.getKey(), PageRequest.of(rand, 3 - idx))) {
-                        if(j+idx == 3) break;
-                        studies.set(idx + j, study);
-                        j++;
+
+                int MAX_STUDY_SIZE = 3;
+                ArrayList<StudyInfoDTO> studies = new ArrayList<>(MAX_STUDY_SIZE);
+                for (int i = 0; i < MAX_STUDY_SIZE; i++) studies.add(null);
+
+                int ascendingEvaluationIndex = 0;
+                while (!priorityQueue.isEmpty()) {
+                    if (ascendingEvaluationIndex >= MAX_STUDY_SIZE) break;
+
+                    int getSize = MAX_STUDY_SIZE - ascendingEvaluationIndex;
+                    int pageSize = getSize;
+
+                    CategoryScore categoryScore = priorityQueue.poll();
+                    if (categoryScore.getScore() >= 90) break;
+
+                    int countStudy = externalStudyContentsRepository.countStudies(categoryScore.getKey());
+                    if (countStudy == 0) continue;
+
+                    int randomPageNumber = ((int) (Math.random() * countStudy)) / pageSize;
+
+                    int responseStudyIndex = ascendingEvaluationIndex;
+                    for (StudyInfoDTO study : externalStudyContentsRepository.getStudies(categoryScore.getKey(), PageRequest.of(randomPageNumber, pageSize))) {
+                        studies.set(responseStudyIndex, study);
+                        responseStudyIndex++;
+                        if(responseStudyIndex >= MAX_STUDY_SIZE) break;
                     }
-                    idx++;
-                    if (idx == 3) break;
+
+                    ascendingEvaluationIndex++;
                 }
                 while (!studies.isEmpty() && studies.get(studies.size() - 1) == null) {
                     studies.remove(studies.size() - 1);
                 }
-                data.setStudies(studies);
+                evaluationClass.setStudies(studies);
             }
 
             feedbackResultEntity.setFeedbackContent(objectMapper.writeValueAsString(evaluationResults));
