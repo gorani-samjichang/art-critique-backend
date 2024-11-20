@@ -114,7 +114,7 @@ public class FeedbackController {
                 if (feedbackEntity.get().getState().equals(FeedbackState.PENDING) || feedbackEntity.get().getState().equals(FeedbackState.NOT_STARTED)) {
                     emitter.send(SseEmitter.event()
                             .name("pending")
-                            .data("{\"rate\":" + ((double)feedbackEntity.get().getProgressRate())/2 + "}")
+                            .data("{\"rate\":" + feedbackEntity.get().getProgressRate() + "}")
                     );
                 } else if (feedbackEntity.get().getState().equals(FeedbackState.COMPLETED)) {
                     RetrieveFeedbackDto dto = generateRetrieveFeedbackDto(feedbackEntity.get());
