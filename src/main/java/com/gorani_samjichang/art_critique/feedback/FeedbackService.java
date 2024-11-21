@@ -9,6 +9,7 @@ import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.exceptions.BadFeedbackRequestException;
 import com.gorani_samjichang.art_critique.common.exceptions.CannotFindBySerialNumberException;
 import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
+import com.gorani_samjichang.art_critique.common.exceptions.RegenerationFeedbackNotFoundException;
 import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
@@ -80,17 +81,43 @@ public class FeedbackService {
 
     public ResponseEntity<String> requestFeedback(
             MultipartFile imageFile,
-            CustomUserDetails userDetails) throws IOException, UserNotFoundException {
+            CustomUserDetails userDetails) throws IOException, UserNotFoundException, RegenerationFeedbackNotFoundException {
+        return requestFeedback(imageFile, userDetails, null);
+    }
+
+    public ResponseEntity<String> requestFeedback(
+            String feedbackSerialNumber,
+            CustomUserDetails userDetails) throws IOException, UserNotFoundException, RegenerationFeedbackNotFoundException {
+        return requestFeedback(null, userDetails, feedbackSerialNumber);
+    }
+
+    public ResponseEntity<String> requestFeedback(
+            MultipartFile imageFile,
+            CustomUserDetails userDetails,
+            String regenerationFeedbackSerialNumber) throws IOException, UserNotFoundException, RegenerationFeedbackNotFoundException {
         MemberEntity me = memberRepository.findById(userDetails.getUid()).orElseThrow(() -> new UserNotFoundException("user not found"));
         CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
         if (me.getCredit() <= 0 || usedCredit == null) {
             return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
         }
 
+        FeedbackEntity oldFeedbackEntity = null;
+        if (regenerationFeedbackSerialNumber != null) {
+            oldFeedbackEntity = feedbackRepository.findBySerialNumber(regenerationFeedbackSerialNumber).orElseThrow(() -> new RegenerationFeedbackNotFoundException("Invalid regeneration feedback serial number"));
+            if(!oldFeedbackEntity.getMemberEntity().getSerialNumber().equals(userDetails.getSerialNumber())) {
+                throw new NoPermissionException("You are not allowed to re-request.");
+           }
+        }
+
         String serialNumber = UUID.randomUUID().toString();
-        String pictureUUID = UUID.randomUUID().toString();
-        String imageUrl = commonUtil.uploadToStorage(imageFile, pictureUUID);
-        FeedbackEntity feedbackEntity = FeedbackEntity
+        String imageUrl;
+        if (oldFeedbackEntity == null) {
+            String pictureUUID = UUID.randomUUID().toString();
+            imageUrl = commonUtil.uploadToStorage(imageFile, pictureUUID);
+        } else {
+            imageUrl = oldFeedbackEntity.getPictureUrl();
+        }
+        FeedbackEntity.FeedbackEntityBuilder feedbackEntityBuilder = FeedbackEntity
                 .builder()
                 .serialNumber(serialNumber)
                 .state("NOT_STARTED")
@@ -99,8 +126,13 @@ public class FeedbackService {
                 .isPublic(true)
                 .pictureUrl(imageUrl)
                 .isHead(true)
-                .tail(null)
-                .build();
+                .tail(null);
+        if (oldFeedbackEntity != null) {
+            feedbackEntityBuilder = feedbackEntityBuilder
+                    .isHead(false)
+                    .tail(oldFeedbackEntity.getSerialNumber());
+        }
+        FeedbackEntity feedbackEntity = feedbackEntityBuilder.build();
 
         me.addFeedback(feedbackEntity);
         usedCredit.useCredit();
@@ -131,7 +163,8 @@ public class FeedbackService {
                 })
                 .doOnComplete(() -> log.debug("Feedback progress rate increment completed"))
                 .subscribe();
-
+        
+        final FeedbackEntity closureOldFeedbackEntity = oldFeedbackEntity;
         String jsonData = "{\"image_url\": " + "\"" + imageUrl + "\"}";
         webClientBuilder.build()
                 .post()
@@ -205,6 +238,10 @@ public class FeedbackService {
                                 .memberEntity(me)
                                 .feedbackEntity(feedbackEntity)
                                 .build();
+                        if (closureOldFeedbackEntity != null) {
+                            closureOldFeedbackEntity.setIsHead(false);
+                            feedbackRepository.save(closureOldFeedbackEntity);
+                        }
                         creditUsedHistoryRepository.save(historyEntity);
                         feedbackRepository.save(feedbackEntity);
                     } catch (NullPointerException e) {
