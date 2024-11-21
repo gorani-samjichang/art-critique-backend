@@ -141,6 +141,8 @@ public class FeedbackService {
                 .retrieve()
                 .bodyToMono(FeedbackEntity.class)
                 .doOnError(error -> {
+                    log.error("Feedback request failed: {}", error.getMessage());
+
                     feedbackProgressRateDisposable.dispose();
 
                     usedCredit.refundCredit();
@@ -213,7 +215,10 @@ public class FeedbackService {
                     }
                 })
                 .timeout(Duration.ofSeconds(200))
-                .subscribe();
+                .subscribe(
+                    response -> log.debug("Response received: {}", response),
+                    error -> log.debug("Error handled: {}", error.getMessage())
+                );
 
         return new ResponseEntity<>(serialNumber, HttpStatusCode.valueOf(200));
     }
