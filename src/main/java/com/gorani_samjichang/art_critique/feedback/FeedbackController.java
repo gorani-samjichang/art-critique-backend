@@ -4,6 +4,8 @@ import com.gorani_samjichang.art_critique.appConstant.FeedbackState;
 import com.gorani_samjichang.art_critique.common.CommonUtil;
 import com.gorani_samjichang.art_critique.common.S3Utils;
 import com.gorani_samjichang.art_critique.common.exceptions.NoPermissionException;
+import com.gorani_samjichang.art_critique.common.exceptions.RegenerationFeedbackNotFoundException;
+import com.gorani_samjichang.art_critique.common.exceptions.UserNotFoundException;
 import com.gorani_samjichang.art_critique.credit.CreditEntity;
 import com.gorani_samjichang.art_critique.credit.CreditRepository;
 import com.gorani_samjichang.art_critique.credit.CreditUsedHistoryEntity;
@@ -211,83 +213,8 @@ public class FeedbackController {
 
     @PostMapping("/re-request/{serialNumber}")
     ResponseEntity<String> reRequest(@PathVariable String serialNumber,
-                                     @AuthenticationPrincipal CustomUserDetails userDetails,
-                                     HttpServletResponse response) {
-
-        Optional<MemberEntity> myMemberEntity = memberRepository.findById(userDetails.getUid());
-        CreditEntity usedCredit = creditRepository.usedCreditEntityByRequest(userDetails.getUid());
-        if (myMemberEntity.isEmpty()) return new ResponseEntity<>(null, HttpStatusCode.valueOf(401));
-        if (myMemberEntity.get().getCredit() <= 0 || usedCredit == null) {
-            return new ResponseEntity<>("noCredit", HttpStatusCode.valueOf(200));
-        }
-
-        usedCredit.useCredit();
-        creditRepository.save(usedCredit);
-
-        Optional<FeedbackEntity> oldFeedbackEntity = feedbackRepository.findBySerialNumber(serialNumber);
-        if(!oldFeedbackEntity.get().getMemberEntity().getSerialNumber().equals(userDetails.getSerialNumber())) {
-            throw new NoPermissionException("You are not allowed to re-request.");
-        }
-
-        String newSerialNumber = UUID.randomUUID().toString();
-        String imageUrl = oldFeedbackEntity.get().getPictureUrl();
-        FeedbackEntity newFeedbackEntity = FeedbackEntity
-                .builder()
-                .serialNumber(newSerialNumber)
-                .state("NOT_STARTED")
-                .progressRate(0)
-                .pictureUrl(imageUrl)
-                .isPublic(oldFeedbackEntity.get().getIsPublic())
-                .isBookmarked(oldFeedbackEntity.get().getIsBookmarked())
-                .tail(oldFeedbackEntity.get().getSerialNumber())
-                .build();
-        feedbackRepository.save(newFeedbackEntity);
-        myMemberEntity.get().addFeedback(newFeedbackEntity);
-        memberRepository.save(myMemberEntity.get());
-
-        String jsonData = "{\"image_url\": " + "\"" + imageUrl + "\"}";
-        webClientBuilder.build()
-                .post()
-                .uri(feedbackServerHost + "/request")
-                .header("Content-Type", "application/json")
-                .bodyValue(jsonData)
-                .retrieve()
-                .bodyToMono(FeedbackEntity.class)
-                .doOnError(error -> {
-                    usedCredit.refundCredit();
-                    newFeedbackEntity.setState(FeedbackState.FAIL);
-                    LocalDateTime NOW = LocalDateTime.now();
-                    newFeedbackEntity.setCreatedAt(NOW);
-                    creditRepository.save(usedCredit);
-                    feedbackRepository.save(newFeedbackEntity);
-                    memberRepository.save(myMemberEntity.get());
-                })
-                .doOnNext(pythonResponse -> {
-                    for (FeedbackResultEntity fre : pythonResponse.getFeedbackResults()) {
-                        fre.setFeedbackEntity(newFeedbackEntity);
-                        if ("evaluation".equals(fre.getFeedbackType())) {
-                            feedbackService.feedbackResultsEvaluationLinkAdd(fre);
-                        }
-                    }
-                    commonUtil.copyNonNullProperties(pythonResponse, newFeedbackEntity);
-                    LocalDateTime NOW = LocalDateTime.now();
-                    newFeedbackEntity.setCreatedAt(NOW);
-                    CreditUsedHistoryEntity historyEntity = CreditUsedHistoryEntity.builder()
-                            .type(usedCredit.getType())
-                            .usedDate(NOW)
-                            .memberEntity(myMemberEntity.get())
-                            .feedbackEntity(newFeedbackEntity)
-                            .build();
-                    newFeedbackEntity.setIsHead(true);
-                    oldFeedbackEntity.get().setIsHead(false);
-                    creditUsedHistoryRepository.save(historyEntity);
-
-                    feedbackRepository.save(oldFeedbackEntity.get());
-                    feedbackRepository.save(newFeedbackEntity);
-                })
-                .subscribe();
-
-        return new ResponseEntity<>(newSerialNumber, HttpStatusCode.valueOf(200));
+                                     @AuthenticationPrincipal CustomUserDetails userDetails) throws IOException, UserNotFoundException, RegenerationFeedbackNotFoundException {
+        return feedbackService.requestFeedback(serialNumber, userDetails);
     }
 
     // todo: false 반환이 없음.
